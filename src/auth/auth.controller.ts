@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { FastifyReply } from 'fastify';
 import { error } from 'node:console';
+import { SignUpDto } from './dto/signup.dto';
 
 
 @Controller('auth')
@@ -16,6 +17,16 @@ export class AuthController {
       res.send({ success: true, data: response });
     } catch (err) {
       res.status(err || 500).send({ success: false, message: err.message || 'Internal server error' });
+    }
+  }
+
+  @Post('signup')
+  async signUp(@Body() body: SignUpDto, @Res() res: FastifyReply) {
+    try {
+      const response = await this.authService.SignUp(body);
+      res.send({ success: true, data: response });
+    } catch (err) {
+      res.status(500).send({ success: false, message: err.message || 'Internal server error' });
     }
   }
 }

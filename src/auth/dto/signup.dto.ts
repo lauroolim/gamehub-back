@@ -10,10 +10,15 @@ import {
     Min,
     Max,
     IsString,
-    IsNotEmpty
+    IsNotEmpty,
+    IsOptional
 } from 'class-validator';
 
-export class LoginDto {
+export class SignUpDto {
+    @IsString()
+    @IsNotEmpty()
+    username: string;
+
     @IsEmail()
     @IsNotEmpty()
     email: string;
@@ -22,4 +27,13 @@ export class LoginDto {
     @IsNotEmpty()
     @Length(8, 30)
     password: string;
+
+    @IsString()
+    profilePicture?: string;
+
+    createdAt?: Date;
+
+    @IsInt({ each: true })
+    @IsOptional()
+    gameInterests?: number[]
 }

@@ -3,6 +3,7 @@ import { PrismaModule } from './shared/database/prisma.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt'; // Import JwtModule
+import { GameModule } from './game/game.module';
 
 
 @Module({
@@ -18,7 +19,7 @@ import { JwtModule } from '@nestjs/jwt'; // Import JwtModule
     }),
     inject: [ConfigService],
   }),
-    PrismaModule, AuthModule],
+    PrismaModule, AuthModule, GameModule, GameModule],
   controllers: [],
   providers: [],
 })
