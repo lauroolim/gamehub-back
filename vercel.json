@@ -6,9 +6,6 @@
             "use": "@vercel/node"
         }
     ],
-    "hooks": {
-        "build": "prisma generate && npm run build"
-    },
     "routes": [
         {
             "src": "/(.*)",
