@@ -11,7 +11,8 @@ import {
     Max,
     IsString,
     IsNotEmpty,
-    IsOptional
+    IsOptional,
+    IsArray
 } from 'class-validator';
 
 export class SignUpDto {
@@ -33,7 +34,6 @@ export class SignUpDto {
 
     createdAt?: Date;
 
-    @IsInt({ each: true })
     @IsOptional()
-    gameInterests?: number[]
+    game?: string[];
 }

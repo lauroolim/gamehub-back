@@ -1,7 +1,12 @@
-import { Controller } from '@nestjs/common';
-import { GameService } from './game.service';
+import { Controller, Get } from '@nestjs/common';
+import { GamesService } from './game.service';
 
-@Controller('game')
-export class GameController {
-  constructor(private readonly gameService: GameService) {}
+@Controller('games')
+export class GamesController {
+  constructor(private readonly gamesService: GamesService) { }
+
+  @Get()
+  findAll() {
+    return this.gamesService.findAll();
+  }
 }

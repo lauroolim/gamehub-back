@@ -57,10 +57,10 @@ export class AuthService {
     if (searchUser) throw new BadRequestException('Email already registered');
 
     // Verifica se todos os jogos fornecidos existem
-    const gameIds = signUpDto.gameInterests || [];
+    const gameIds = signUpDto.game || [];
     const existingGames = await this.PrismaService.game.findMany({
       where: {
-        id: { in: gameIds },
+        id: { in: gameIds.map(id => parseInt(id, 10)) },
       },
     });
 
@@ -76,10 +76,8 @@ export class AuthService {
         password: await bcrypt.hash(signUpDto.password, 10),
         profilePictureUrl: signUpDto.profilePicture,
         createdAt: new Date(),
-        gameInterests: {
-          create: gameIds.map(gameId => ({
-            game: { connect: { id: gameId } }
-          }))
+        games: {
+          connect: gameIds.map(id => ({ id: parseInt(id, 10) })),
         },
       }
     });
