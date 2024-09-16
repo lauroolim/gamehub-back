@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class UserGameInterestService {
@@ -20,7 +19,7 @@ export class UserGameInterestService {
         });
     }
 
-    async findSimilarGames(userId: number): Promise<User[]> {
+    async findSimilarGames(userId: number): Promise<any> {
         // Buscar os interesses de jogos do usuário fornecido
         const userInterests = await this.prisma.user.findUnique({
             where: { id: userId },
