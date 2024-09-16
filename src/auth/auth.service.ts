@@ -46,21 +46,30 @@ export class AuthService {
     };
   }
 
-  async SignUp(signUpDto: SignUpDto) {
+  async signUp(signUpDto: SignUpDto) {
     // Verifica se o email já está cadastrado
-    const searchUser = await this.PrismaService.user.findFirst({
+    const searchUserByEmail = await this.PrismaService.user.findFirst({
       where: {
         email: signUpDto.email,
       },
     });
 
-    if (searchUser) throw new BadRequestException('Email already registered');
+    if (searchUserByEmail) throw new BadRequestException('Email already registered');
+
+    // Verifica se o nome de usuário já está cadastrado
+    const searchUserByUsername = await this.PrismaService.user.findFirst({
+      where: {
+        username: signUpDto.username,
+      },
+    });
+
+    if (searchUserByUsername) throw new BadRequestException('Username already taken');
 
     // Verifica se todos os jogos fornecidos existem
-    const gameIds = signUpDto.game || [];
+    const gameIds = signUpDto.games || [];
     const existingGames = await this.PrismaService.game.findMany({
       where: {
-        id: { in: gameIds.map(id => parseInt(id, 10)) },
+        id: { in: gameIds },
       },
     });
 
@@ -76,14 +85,19 @@ export class AuthService {
         password: await bcrypt.hash(signUpDto.password, 10),
         profilePictureUrl: signUpDto.profilePicture,
         createdAt: new Date(),
-        games: {
-          connect: gameIds.map(id => ({ id: parseInt(id, 10) })),
-        },
-      }
+      },
     });
 
     if (!newUser) throw new InternalServerErrorException('Error creating user');
 
-    return null;
+    // Cria as relações na tabela GameUser
+    await this.PrismaService.gameUser.createMany({
+      data: gameIds.map(gameId => ({
+        gameId,
+        userId: newUser.id,
+      })),
+    });
+
+    return newUser;
   }
 }

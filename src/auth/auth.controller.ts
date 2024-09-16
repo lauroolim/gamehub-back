@@ -23,7 +23,7 @@ export class AuthController {
   @Post('signup')
   async signUp(@Body() body: SignUpDto, @Res() res: FastifyReply) {
     try {
-      const response = await this.authService.SignUp(body);
+      const response = await this.authService.signUp(body);
       res.send({ success: true, data: response });
     } catch (err) {
       res.status(500).send({ success: false, message: err.message || 'Internal server error' });
