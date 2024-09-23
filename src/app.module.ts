@@ -26,7 +26,8 @@ import { UserService } from './user/user.service';
     AuthModule,
     GameModule,
     UserGameInterestModule,
-    UserModule],
+    UserModule
+  ],
   controllers: [],
   providers: [],
 })
