@@ -25,6 +25,9 @@ model User {
 
   sentFriendships     Friendship[] @relation("SentFriendships")
   receivedFriendships Friendship[] @relation("ReceivedFriendships")
+
+  sentMessages     Message[] @relation("SenderMessages")
+  receivedMessages Message[] @relation("ReceiverMessages")
 }
 
 model Game {
@@ -54,4 +57,20 @@ model Friendship {
 
   sender   User @relation("SentFriendships", fields: [senderId], references: [id])
   receiver User @relation("ReceivedFriendships", fields: [receiverId], references: [id])
+}
+
+model Message {
+  id             Int      @id @default(autoincrement())
+  senderId       Int
+  receiverId     Int
+  content        String
+  createdAt      DateTime @default(now())
+  conversationId Int
+
+  messageSender   User @relation("SenderMessages", fields: [senderId], references: [id])
+  messageReceiver User @relation("ReceiverMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([conversationId])
 }
