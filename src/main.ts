@@ -6,6 +6,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
+  app.enableCors();
   app.setGlobalPrefix('/api');
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
