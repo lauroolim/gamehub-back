@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,36 +8,33 @@ datasource db {
 }
 
 model User {
-  id                Int        @id @default(autoincrement())
-  username          String     @unique
-  email             String     @unique
-  password          String
-  profilePictureUrl String?
-  createdAt         DateTime   @default(now())
-  games             Game[]
-  GameUser          GameUser[]
-
-  sentFriendships     Friendship[] @relation("SentFriendships")
+  id                  Int          @id @default(autoincrement())
+  username            String       @unique
+  email               String       @unique
+  password            String
+  profilePictureUrl   String?
+  createdAt           DateTime     @default(now())
   receivedFriendships Friendship[] @relation("ReceivedFriendships")
-
-  sentMessages     Message[] @relation("SenderMessages")
-  receivedMessages Message[] @relation("ReceiverMessages")
+  sentFriendships     Friendship[] @relation("SentFriendships")
+  GameUser            GameUser[]
+  receivedMessages    Message[]    @relation("ReceiverMessages")
+  sentMessages        Message[]    @relation("SenderMessages")
+  games               Game[]       @relation("GameToUser")
 }
 
 model Game {
   id          Int        @id @default(autoincrement())
   name        String     @unique
   description String?
-  users       User[]
   GameUser    GameUser[]
+  users       User[]     @relation("GameToUser")
 }
 
 model GameUser {
   gameId Int
   userId Int
-
-  game Game @relation(fields: [gameId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  game   Game @relation(fields: [gameId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
 
   @@id([gameId, userId])
 }
@@ -54,21 +45,19 @@ model Friendship {
   receiverId Int
   status     String   @default("pending")
   createdAt  DateTime @default(now())
-
-  sender   User @relation("SentFriendships", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedFriendships", fields: [receiverId], references: [id])
+  receiver   User     @relation("ReceivedFriendships", fields: [receiverId], references: [id])
+  sender     User     @relation("SentFriendships", fields: [senderId], references: [id])
 }
 
 model Message {
-  id             Int      @id @default(autoincrement())
-  senderId       Int
-  receiverId     Int
-  content        String
-  createdAt      DateTime @default(now())
-  conversationId Int
-
-  messageSender   User @relation("SenderMessages", fields: [senderId], references: [id])
-  messageReceiver User @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  id              Int      @id @default(autoincrement())
+  senderId        Int
+  receiverId      Int
+  content         String
+  createdAt       DateTime @default(now())
+  conversationId  Int
+  messageReceiver User     @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  messageSender   User     @relation("SenderMessages", fields: [senderId], references: [id])
 
   @@index([senderId])
   @@index([receiverId])
