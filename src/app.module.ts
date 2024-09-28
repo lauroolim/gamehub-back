@@ -10,6 +10,7 @@ import { UserService } from './user/user.service';
 import { ChatModule } from './chat/chat.module';
 import { AppService } from './app.service';
 import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
+import { FriendshipModule } from './friendship/friendship.module';
 
 
 @Module({
@@ -30,7 +31,8 @@ import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
     GameModule,
     UserGameInterestModule,
     UserModule,
-    ChatModule
+    ChatModule,
+    FriendshipModule
   ],
   controllers: [],
   providers: [

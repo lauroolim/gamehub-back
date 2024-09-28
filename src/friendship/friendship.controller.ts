@@ -4,29 +4,35 @@ import { CreateFriendshipDto } from './dto/friendship.dto';
 
 @Controller('friendships')
 export class FriendshipController {
-  constructor(private readonly friendshipService: FriendshipService) {}
-
-  // Endpoint para enviar uma solicitação de amizade
+  constructor(private readonly friendshipService: FriendshipService) { }
   @Post()
   async createFriendship(@Body() createFriendshipDto: CreateFriendshipDto) {
-    return this.friendshipService.sendFriendRequest(createFriendshipDto);
+    const { senderId, receiverId } = createFriendshipDto;
+    return this.friendshipService.sendFriendRequest(senderId, receiverId);
   }
 
-  // Endpoint para aceitar uma solicitação de amizade
   @Patch(':id/accept')
   async acceptFriendship(@Param('id') id: string) {
     return this.friendshipService.acceptFriendRequest(+id);
   }
 
-  // Endpoint para recusar uma solicitação de amizade
   @Patch(':id/reject')
   async rejectFriendship(@Param('id') id: string) {
     return this.friendshipService.rejectFriendRequest(+id);
   }
 
-  // Endpoint para listar todas as amizades do usuário autenticado
   @Get()
   async getAllFriendships() {
-    return this.friendshipService.listFriends();
+    const userId = 1;
+    return this.friendshipService.listFriends(userId);
+  }
+
+  @Get('are-friends/:userId1/:userId2')
+  async areFriends(
+    @Param('userId1') userId1: number,
+    @Param('userId2') userId2: number,
+  ): Promise<{ areFriends: boolean }> {
+    const areFriends = await this.friendshipService.areFriends(userId1, userId2);
+    return { areFriends };
   }
 }
