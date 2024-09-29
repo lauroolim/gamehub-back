@@ -20,104 +20,135 @@ describe('FriendshipService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('sendFriendRequest', () => {
-    it('deve enviar uma solicitação de amizade', async () => {
-      const senderId = 1;
-      const receiverId = 2;
-      const expectedFriendship = { id: 1, senderId, receiverId, status: 'pending' };
+  describe('followUser', () => {
+    it('deve permitir que um usuário siga outro', async () => {
+      const followerId = 1;
+      const followingId = 2;
+      const expectedFriendship = { id: 1, senderId: followerId, receiverId: followingId, status: 'following', createdAt: new Date() };
 
-      (prisma.friendship.create as jest.Mock).mockResolvedValue(expectedFriendship);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: followerId } as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: followingId } as any);
+      jest.spyOn(prisma.friendship, 'create').mockResolvedValueOnce(expectedFriendship);
 
-      const result = await service.sendFriendRequest(senderId, receiverId);
+      const result = await service.followUser(followerId, followingId);
 
       expect(result).toEqual(expectedFriendship);
       expect(prisma.friendship.create).toHaveBeenCalledWith({
         data: {
-          senderId,
-          receiverId,
-          status: 'pending',
+          senderId: followerId,
+          receiverId: followingId,
+          status: 'following',
         },
       });
     });
-  });
 
-  describe('acceptFriendRequest', () => {
-    it('deve aceitar uma solicitação de amizade', async () => {
-      const friendshipId = 1;
-      const expectedFriendship = { id: friendshipId, status: 'accepted' };
+    it('deve lançar NotFoundException se o usuário seguidor não existir', async () => {
+      const followerId = 1;
+      const followingId = 2;
 
-      (prisma.friendship.findUnique as jest.Mock).mockResolvedValue(expectedFriendship);
-      (prisma.friendship.update as jest.Mock).mockResolvedValue(expectedFriendship);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce(null);
 
-      const result = await service.acceptFriendRequest(friendshipId);
-
-      expect(result).toEqual(expectedFriendship);
-      expect(prisma.friendship.update).toHaveBeenCalledWith({
-        where: { id: friendshipId },
-        data: { status: 'accepted' },
-      });
+      await expect(service.followUser(followerId, followingId)).rejects.toThrow(NotFoundException);
     });
 
-    it('deve lançar NotFoundException se a solicitação não existir', async () => {
-      const friendshipId = 1;
+    it('deve lançar NotFoundException se o usuário a ser seguido não existir', async () => {
+      const followerId = 1;
+      const followingId = 2;
 
-      (prisma.friendship.findUnique as jest.Mock).mockResolvedValue(null);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({ id: followerId } as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce(null);
 
-      await expect(service.acceptFriendRequest(friendshipId)).rejects.toThrow(NotFoundException);
+      await expect(service.followUser(followerId, followingId)).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('rejectFriendRequest', () => {
-    it('deve recusar uma solicitação de amizade', async () => {
-      const friendshipId = 1;
-      const expectedFriendship = { id: friendshipId, status: 'rejected' };
-
-      (prisma.friendship.findUnique as jest.Mock).mockResolvedValue(expectedFriendship);
-      (prisma.friendship.update as jest.Mock).mockResolvedValue(expectedFriendship);
-
-      const result = await service.rejectFriendRequest(friendshipId);
-
-      expect(result).toEqual(expectedFriendship);
-      expect(prisma.friendship.update).toHaveBeenCalledWith({
-        where: { id: friendshipId },
-        data: { status: 'rejected' },
-      });
-    });
-
-    it('deve lançar NotFoundException se a solicitação não existir', async () => {
-      const friendshipId = 1;
-
-      (prisma.friendship.findUnique as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.rejectFriendRequest(friendshipId)).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('listFriends', () => {
-    it('deve retornar a lista de amigos', async () => {
+  describe('listFollowing', () => {
+    it('deve retornar a lista de usuários que o usuário está seguindo', async () => {
       const userId = 1;
-      const expectedFriends = [
-        { id: 1, senderId: 1, receiverId: 2, status: 'accepted' },
-        { id: 2, senderId: 2, receiverId: 1, status: 'accepted' },
+      const expectedFollowings = [
+        { id: 1, senderId: userId, receiverId: 2, status: 'following', createdAt: new Date() },
       ];
 
-      (prisma.friendship.findMany as jest.Mock).mockResolvedValue(expectedFriends);
+      jest.spyOn(prisma.friendship, 'findMany').mockResolvedValueOnce(expectedFollowings);
 
-      const result = await service.listFriends(userId);
+      const result = await service.listFollowing(userId);
 
-      expect(result).toEqual(expectedFriends);
+      expect(result).toEqual(expectedFollowings);
       expect(prisma.friendship.findMany).toHaveBeenCalledWith({
+        where: { senderId: userId, status: 'following' },
+        include: { receiver: true },
+      });
+    });
+  });
+
+  describe('listFollowers', () => {
+    it('deve retornar a lista de usuários que estão seguindo o usuário', async () => {
+      const userId = 1;
+      const expectedFollowers = [
+        { id: 1, senderId: 2, receiverId: userId, status: 'following', createdAt: new Date() },
+      ];
+
+      jest.spyOn(prisma.friendship, 'findMany').mockResolvedValueOnce(expectedFollowers);
+
+      const result = await service.listFollowers(userId);
+
+      expect(result).toEqual(expectedFollowers);
+      expect(prisma.friendship.findMany).toHaveBeenCalledWith({
+        where: { receiverId: userId, status: 'following' },
+        include: { sender: true },
+      });
+    });
+  });
+
+
+  describe('listFollowers', () => {
+    it('deve retornar a lista de usuários que estão seguindo o usuário', async () => {
+      const userId = 1;
+      const expectedFollowers = [
+        { id: 1, senderId: 2, receiverId: userId, status: 'following', createdAt: new Date() },
+      ];
+
+      jest.spyOn(prisma.friendship, 'findMany').mockResolvedValueOnce(expectedFollowers);
+
+      const result = await service.listFollowers(userId);
+
+      expect(result).toEqual(expectedFollowers);
+      expect(prisma.friendship.findMany).toHaveBeenCalledWith({
+        where: { receiverId: userId, status: 'following' },
+        include: { sender: true },
+      });
+    });
+  });
+
+  describe('isFollowing', () => {
+    it('deve retornar true se o usuário estiver seguindo outro', async () => {
+      const followerId = 1;
+      const followingId = 2;
+      const expectedFriendship = { id: 1, senderId: followerId, receiverId: followingId, status: 'following', createdAt: new Date() };
+
+      jest.spyOn(prisma.friendship, 'findFirst').mockResolvedValueOnce(expectedFriendship);
+
+      const result = await service.isFollowing(followerId, followingId);
+
+      expect(result).toBe(true);
+      expect(prisma.friendship.findFirst).toHaveBeenCalledWith({
         where: {
-          OR: [
-            { senderId: userId, status: 'accepted' },
-            { receiverId: userId, status: 'accepted' },
-          ],
-        },
-        include: {
-          sender: true,
-          receiver: true,
+          senderId: followerId,
+          receiverId: followingId,
+          status: 'following',
         },
       });
+    });
+
+    it('deve retornar false se o usuário não estiver seguindo outro', async () => {
+      const followerId = 1;
+      const followingId = 2;
+
+      jest.spyOn(prisma.friendship, 'findFirst').mockResolvedValueOnce(null);
+
+      const result = await service.isFollowing(followerId, followingId);
+
+      expect(result).toBe(false);
     });
   });
 });

@@ -8,11 +8,16 @@ datasource db {
 }
 
 model User {
-  id                  Int          @id @default(autoincrement())
-  username            String       @unique
-  email               String       @unique
-  password            String
-  profilePictureUrl   String?
+  id                Int     @id @default(autoincrement())
+  username          String  @unique
+  email             String  @unique
+  password          String
+  profilePictureUrl String?
+  bio               String?
+
+  followers Int @default(0)
+  following Int @default(0)
+
   createdAt           DateTime     @default(now())
   receivedFriendships Friendship[] @relation("ReceivedFriendships")
   sentFriendships     Friendship[] @relation("SentFriendships")
@@ -23,11 +28,12 @@ model User {
 }
 
 model Game {
-  id          Int        @id @default(autoincrement())
-  name        String     @unique
-  description String?
-  GameUser    GameUser[]
-  users       User[]     @relation("GameToUser")
+  id           Int        @id @default(autoincrement())
+  name         String     @unique
+  description  String?
+  gameimageUrl String?
+  GameUser     GameUser[]
+  users        User[]     @relation("GameToUser")
 }
 
 model GameUser {
