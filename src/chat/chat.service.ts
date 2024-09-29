@@ -56,31 +56,51 @@ export class ChatService {
     }
 
     async listConversations(userId: number) {
-        return this.prisma.message.findMany({
+        // Primeiro, buscamos todos os conversationIds relacionados ao usuário
+        const conversations = await this.prisma.message.findMany({
             where: {
                 OR: [
                     { senderId: userId },
                     { receiverId: userId },
                 ],
             },
-            orderBy: { createdAt: 'desc' },
-            include: {
-                messageSender: {
-                    select: {
-                        id: true,
-                        username: true,
-                        profilePictureUrl: true,
-                    },
-                },
-                messageReceiver: {
-                    select: {
-                        id: true,
-                        username: true,
-                        profilePictureUrl: true,
-                    },
-                },
+            select: {
+                conversationId: true,
             },
+            distinct: ['conversationId'], // Garante que cada conversa seja única
         });
+
+        // Para cada conversationId, buscamos a última mensagem
+        const conversationsWithLastMessage = await Promise.all(
+            conversations.map(async (conversation) => {
+                const lastMessage = await this.prisma.message.findFirst({
+                    where: {
+                        conversationId: conversation.conversationId,
+                    },
+                    orderBy: { createdAt: 'desc' }, // Busca a última mensagem pela data
+                    include: {
+                        messageSender: {
+                            select: {
+                                id: true,
+                                username: true,
+                                profilePictureUrl: true,
+                            },
+                        },
+                        messageReceiver: {
+                            select: {
+                                id: true,
+                                username: true,
+                                profilePictureUrl: true,
+                            },
+                        },
+                    },
+                });
+
+                return lastMessage;
+            })
+        );
+
+        return conversationsWithLastMessage;
     }
 }
 
