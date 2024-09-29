@@ -24,4 +24,7 @@ export class UpdateUserDto {
     @IsArray()
     @IsInt({ each: true })
     gameIds?: number[];
+
+    @IsOptional()
+    bio?: string;
 }

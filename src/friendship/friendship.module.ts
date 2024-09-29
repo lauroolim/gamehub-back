@@ -8,5 +8,6 @@ import { PrismaService } from '../shared/database/prisma.service';
   imports: [PrismaModule],
   controllers: [FriendshipController],
   providers: [FriendshipService, PrismaService],
+  exports: [FriendshipService]
 })
 export class FriendshipModule { }

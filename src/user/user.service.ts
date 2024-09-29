@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { FriendshipService } from '../friendship/friendship.service';
 
 @Injectable()
 export class UserService {
@@ -8,7 +9,13 @@ export class UserService {
 
     async findAll() {
         return this.prismaService.user.findMany({
-            include: {
+            select: {
+                id: true,
+                username: true,
+                bio: true,
+                profilePictureUrl: true,
+                followers: true,
+                following: true,
                 GameUser: {
                     include: {
                         game: true,
@@ -18,12 +25,17 @@ export class UserService {
         });
     }
 
+    // Método para buscar um único usuário
     async findOne(id: number) {
-        return this.prismaService.user.findUnique({
-            where: {
-                id: id,
-            },
-            include: {
+        const user = await this.prismaService.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                username: true,
+                bio: true,
+                profilePictureUrl: true,
+                followers: true,
+                following: true,
                 GameUser: {
                     include: {
                         game: true,
@@ -31,20 +43,32 @@ export class UserService {
                 },
             },
         });
+
+        if (!user) {
+            throw new InternalServerErrorException('User not found');
+        }
+
+        return user;
     }
 
     async update(id: number, updateUserDto: UpdateUserDto) {
-        const { gameIds, username } = updateUserDto;
+        const { gameIds, username, bio } = updateUserDto;
 
         const updateData: any = {};
 
         if (username) {
-            updateData.username = username; // Corrigido para usar 'username'
+            updateData.username = username;
+        }
+
+        if (bio !== undefined) {
+            updateData.bio = bio;
+        } else {
+            updateData.bio = '';
         }
 
         if (gameIds) {
             updateData.games = {
-                connect: gameIds.map(gameId => ({ id: gameId })),
+                connect: gameIds.map((gameId) => ({ id: gameId })),
             };
         }
 

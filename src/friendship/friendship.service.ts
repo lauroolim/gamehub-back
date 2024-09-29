@@ -18,13 +18,25 @@ export class FriendshipService {
       throw new NotFoundException(`User with ID ${followingId} not found`);
     }
 
-    return this.prisma.friendship.create({
+    const friendship = await this.prisma.friendship.create({
       data: {
         senderId: followerId,
         receiverId: followingId,
         status: 'following',
       },
     });
+
+    await this.prisma.user.update({
+      where: { id: followerId },
+      data: { following: { increment: 1 } },
+    });
+
+    await this.prisma.user.update({
+      where: { id: followingId },
+      data: { followers: { increment: 1 } },
+    });
+
+    return friendship;
   }
 
   async listFollowing(userId: number) {

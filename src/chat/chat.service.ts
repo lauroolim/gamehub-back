@@ -54,5 +54,33 @@ export class ChatService {
             orderBy: { createdAt: 'asc' },
         });
     }
+
+    async listConversations(userId: number) {
+        return this.prisma.message.findMany({
+            where: {
+                OR: [
+                    { senderId: userId },
+                    { receiverId: userId },
+                ],
+            },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                messageSender: {
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true,
+                    },
+                },
+                messageReceiver: {
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true,
+                    },
+                },
+            },
+        });
+    }
 }
 
