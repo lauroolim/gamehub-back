@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { UserGameInterestService } from './user-game-interest.service';
 
 @Controller('user-game-interests')
@@ -15,8 +15,13 @@ export class UserGameInterestController {
     return this.userGameInterestService.findUserGameInterestsByGameId(gameId);
   }
 
-  @Get(':userId/find-similar-games')
-  async findSimilarGames(@Param('userId') userId: number) {
-    return this.userGameInterestService.findSimilarGames(userId);
+  @Get('similar-games/:userId')
+  async getSimilarGames(
+    @Param('userId') userId: number,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 15,
+  ) {
+    return this.userGameInterestService.findSimilarGames(userId, page, limit);
   }
+
 }

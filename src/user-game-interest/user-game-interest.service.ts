@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
-import { User } from '@prisma/client';
 
 @Injectable()
 export class UserGameInterestService {
@@ -20,21 +19,26 @@ export class UserGameInterestService {
         });
     }
 
-    async findSimilarGames(userId: number): Promise<User[]> {
-        // Buscar os interesses de jogos do usuário fornecido
+    async findSimilarGames(userId: number, page: number = 1, limit: number = 15): Promise<any> {
+
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.max(1, Math.min(15, Number(limit) || 15));
+
+        const offset = (page - 1) * limit;
+
+
         const userInterests = await this.prisma.user.findUnique({
             where: { id: userId },
             include: { GameUser: { include: { game: true } } },
         });
 
-        if (!userInterests) {
-            return [];
+        if (!userInterests || userInterests.GameUser.length === 0) {
+            return this.getAllUsersPaginated(page, limit);
         }
 
         const gameIds = userInterests.GameUser.map(gameUser => gameUser.gameId);
 
-        // Buscar outros usuários que têm interesses nos mesmos jogos, excluindo o usuário fornecido
-        return this.prisma.user.findMany({
+        const similarUsers = await this.prisma.user.findMany({
             where: {
                 GameUser: {
                     some: {
@@ -43,6 +47,27 @@ export class UserGameInterestService {
                 },
                 id: { not: userId },
             },
+            include: {
+                GameUser: { include: { game: true } },
+            },
+            skip: offset,
+            take: limit,
+        });
+
+        if (similarUsers.length === 0) {
+            return this.getAllUsersPaginated(page, limit);
+        }
+
+        return similarUsers;
+    }
+
+
+    private async getAllUsersPaginated(page: number, limit: number) {
+        const offset = (page - 1) * limit;
+
+        return this.prisma.user.findMany({
+            skip: offset,
+            take: limit,
             include: {
                 GameUser: { include: { game: true } },
             },

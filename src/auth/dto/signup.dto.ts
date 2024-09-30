@@ -35,5 +35,7 @@ export class SignUpDto {
     createdAt?: Date;
 
     @IsOptional()
-    game?: string[];
+    @IsArray()
+    @IsInt({ each: true })
+    games?: number[];
 }
