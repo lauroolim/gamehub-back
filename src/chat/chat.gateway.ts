@@ -13,7 +13,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Logger, UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from '../auth/ws-jwt/ws-jwt.guard';
 
-@WebSocketGateway(3001, { namespace: 'chat', cors: true })
+@WebSocketGateway({
+  namespace: 'chat',
+  cors: {
+    origin: 'https://gamehub-back-6h0k.onrender.com',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+    credentials: true,
+  },
+})
 @UseGuards(WsJwtGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
