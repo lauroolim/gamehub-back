@@ -25,7 +25,6 @@ export class UserService {
         });
     }
 
-    // Método para buscar um único usuário
     async findOne(id: number) {
         const user = await this.prismaService.user.findUnique({
             where: { id },
