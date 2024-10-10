@@ -5,13 +5,12 @@ import { FastifyReply } from 'fastify';
 import { error } from 'node:console';
 import { SignUpDto } from './dto/signup.dto';
 
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
   @Post('login')
-  async login(@Body() body: LoginDto, @Res() res: FastifyReply) {
+  async login(@Body() body: LoginDto, @Res() res: FastifyReply<any>) {
     try {
       const response = await this.authService.login(body);
       res.send({ success: true, data: response });
@@ -21,7 +20,7 @@ export class AuthController {
   }
 
   @Post('signup')
-  async signUp(@Body() body: SignUpDto, @Res() res: FastifyReply) {
+  async signUp(@Body() body: SignUpDto, @Res() res: FastifyReply<any>) {
     try {
       const response = await this.authService.signUp(body);
       res.send({ success: true, data: response });

@@ -6,7 +6,6 @@ import { CreateFriendshipDto } from './dto/friendship.dto';
 export class FriendshipController {
   constructor(private readonly friendshipService: FriendshipService) { }
 
-  // Rota para seguir um usuário
   @Post('follow')
   async followUser(@Body() body: { followerId: number; followingId: number }) {
     const { followerId, followingId } = body;
@@ -21,13 +20,11 @@ export class FriendshipController {
   }
 
 
-  // Listar os seguidores de um usuário
   @Get('followers/:userId')
   async listFollowers(@Param('userId') userId: number) {
     return this.friendshipService.listFollowers(userId);
   }
 
-  // Verificar se um usuário está seguindo outro
   @Get('is-following/:followerId/:followingId')
   async isFollowing(
     @Param('followerId') followerId: number,

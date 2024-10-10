@@ -1,10 +1,10 @@
 export class Message {
-    id?: number; // O id pode ser opcional
+    id?: number;
     senderId: number;
     receiverId: number;
     content: string;
     conversationId: number;
-    createdAt?: Date; // O createdAt pode ser opcional, dependendo de como você está gerenciando isso
+    createdAt?: Date;
 
     constructor(
         senderId: number,
@@ -19,6 +19,6 @@ export class Message {
         this.content = content;
         this.conversationId = conversationId;
         this.id = id;
-        this.createdAt = createdAt || new Date(); // Se não for fornecido, usa a data atual
+        this.createdAt = createdAt || new Date();
     }
 }
