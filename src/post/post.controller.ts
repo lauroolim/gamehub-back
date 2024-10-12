@@ -13,7 +13,7 @@ export class PostController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async createPost(
-    @Body() createPostDto: CreatePostDto,
+    @Body() body: { authorId: string; content: string },
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -23,6 +23,11 @@ export class PostController {
       })
     ) file?: Express.Multer.File,
   ) {
+    const createPostDto: CreatePostDto = {
+      authorId: parseInt(body.authorId, 10),
+      content: body.content,
+    };
+
     return this.postService.create(createPostDto, file);
   }
 
