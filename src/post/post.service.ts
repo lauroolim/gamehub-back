@@ -20,6 +20,7 @@ export class PostService {
       Bucket: 'midias-app-gamehub',
       Key: fileName,
       Body: file,
+      ACL: 'public-read',
     });
     await this.s3Client.send(command);
     return `https://midias-app-gamehub.s3.amazonaws.com/${fileName}`;
