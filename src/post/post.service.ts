@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PrismaService } from '../shared/database/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -43,15 +43,15 @@ export class PostService {
     });
   }
 
-  findAll() {
+  async findAll() {
     return this.prisma.post.findMany();
   }
 
-  findOne(id: number) {
+  async findOne(id: number) {
     return this.prisma.post.findUnique({ where: { id } });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
     return this.prisma.post.delete({ where: { id } });
   }
 
@@ -60,6 +60,59 @@ export class PostService {
       where: { postId_userId: { postId, userId } },
       update: { isViewed: true },
       create: { postId, userId, isViewed: true },
+    });
+  }
+
+  async likePost(postId: number, userId: number) {
+    const existingLike = await this.prisma.like.findUnique({
+      where: { postId_userId: { postId, userId } },
+    });
+
+    if (existingLike) {
+      throw new ConflictException('User already liked this post');
+    }
+
+    return this.prisma.like.create({
+      data: {
+        postId,
+        userId,
+      },
+    });
+  }
+
+  async createComment(postId: number, userId: number, content: string) {
+    return this.prisma.comment.create({
+      data: {
+        postId,
+        userId,
+        content,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getPostWithDetails(postId: number) {
+    return this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        _count: {
+          select: { likes: true, comments: true },
+        },
+        comments: {
+          select: {
+            content: true,
+            user: { select: { username: true } },
+            createdAt: true,
+          },
+        },
+      },
     });
   }
 }

@@ -53,4 +53,25 @@ export class PostController {
   ) {
     return this.postService.isViewed(+postId, +userId);
   }
+
+  @Post(':postId/like')
+  async likePost(
+    @Param('postId') postId: string,
+    @Body('userId') userId: string
+  ) {
+    return this.postService.likePost(+postId, +userId);
+  }
+
+  @Post(':postId/comment')
+  async commentOnPost(
+    @Param('postId') postId: string,
+    @Body() body: { userId: string; content: string }
+  ) {
+    return this.postService.createComment(+postId, +body.userId, body.content);
+  }
+
+  @Get(':postId/details')
+  async getPostDetails(@Param('postId') postId: string) {
+    return this.postService.getPostWithDetails(+postId);
+  }
 }
