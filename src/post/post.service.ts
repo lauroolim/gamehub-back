@@ -8,8 +8,8 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 export class PostService {
   constructor(
     private prisma: PrismaService,
-    private readonly configService: ConfigService
-  ) { }
+    private readonly configService: ConfigService,
+  ) {}
 
   private readonly s3Client = new S3Client({
     region: this.configService.getOrThrow('AWS_S3_REGION'),
@@ -94,6 +94,15 @@ export class PostService {
             username: true,
           },
         },
+      },
+    });
+  }
+
+  async removeComment(postId: number, commentId: number) {
+    return this.prisma.comment.deleteMany({
+      where: {
+        id: commentId,
+        postId: postId,
       },
     });
   }

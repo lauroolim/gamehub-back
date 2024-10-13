@@ -1,6 +1,16 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors,
-  UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -8,7 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('post')
 export class PostController {
-  constructor(private readonly postService: PostService) { }
+  constructor(private readonly postService: PostService) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -18,10 +28,13 @@ export class PostController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 20 * 1024 * 1024 }),
-          new FileTypeValidator({ fileType: /image\/(png|jpg|jpeg)|video\/(mp4|avi|mov)/ }),
+          new FileTypeValidator({
+            fileType: /image\/(png|jpg|jpeg)|video\/(mp4|avi|mov)/,
+          }),
         ],
-      })
-    ) file?: Express.Multer.File,
+      }),
+    )
+    file?: Express.Multer.File,
   ) {
     const createPostDto: CreatePostDto = {
       authorId: parseInt(body.authorId, 10),
@@ -46,10 +59,18 @@ export class PostController {
     return this.postService.remove(+id);
   }
 
+  @Delete(':postId/comment/:commentId')
+  removeComment(
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.postService.removeComment(+postId, +commentId);
+  }
+
   @Patch(':postId/view/:userId')
   markAsViewed(
     @Param('postId') postId: string,
-    @Param('userId') userId: string
+    @Param('userId') userId: string,
   ) {
     return this.postService.isViewed(+postId, +userId);
   }
@@ -57,7 +78,7 @@ export class PostController {
   @Post(':postId/like')
   async likePost(
     @Param('postId') postId: string,
-    @Body('userId') userId: string
+    @Body('userId') userId: string,
   ) {
     return this.postService.likePost(+postId, +userId);
   }
@@ -65,7 +86,7 @@ export class PostController {
   @Post(':postId/comment')
   async commentOnPost(
     @Param('postId') postId: string,
-    @Body() body: { userId: string; content: string }
+    @Body() body: { userId: string; content: string },
   ) {
     return this.postService.createComment(+postId, +body.userId, body.content);
   }
