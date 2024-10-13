@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { LikeDto } from './dto/like.dto';
 import { PrismaService } from '../shared/database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -9,7 +11,7 @@ export class PostService {
   constructor(
     private prisma: PrismaService,
     private readonly configService: ConfigService
-  ) { }
+  ) {}
 
   private readonly s3Client = new S3Client({
     region: this.configService.getOrThrow('AWS_S3_REGION'),
@@ -44,11 +46,16 @@ export class PostService {
   }
 
   findAll() {
-    return this.prisma.post.findMany();
+    return this.prisma.post.findMany({
+      include: { comments: true, likes: true },
+    });
   }
 
   findOne(id: number) {
-    return this.prisma.post.findUnique({ where: { id } });
+    return this.prisma.post.findUnique({
+      where: { id },
+      include: { comments: true, likes: true },
+    });
   }
 
   remove(id: number) {
@@ -60,6 +67,18 @@ export class PostService {
       where: { postId_userId: { postId, userId } },
       update: { isViewed: true },
       create: { postId, userId, isViewed: true },
+    });
+  }
+
+  async addComment(data: CreateCommentDto) {
+    return this.prisma.comment.create({
+      data,
+    });
+  }
+
+  async likePost(data: LikeDto) {
+    return this.prisma.like.create({
+      data,
     });
   }
 }

@@ -4,11 +4,13 @@ import {
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { LikeDto } from './dto/like.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('post')
 export class PostController {
-  constructor(private readonly postService: PostService) { }
+  constructor(private readonly postService: PostService) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -52,5 +54,21 @@ export class PostController {
     @Param('userId') userId: string
   ) {
     return this.postService.isViewed(+postId, +userId);
+  }
+
+  @Post(':postId/comments')
+  addComment(
+    @Param('postId') postId: string,
+    @Body() createCommentDto: CreateCommentDto
+  ) {
+    return this.postService.addComment({ ...createCommentDto, postId: +postId });
+  }
+
+  @Post(':postId/like')
+  likePost(
+    @Param('postId') postId: string,
+    @Body() likeDto: LikeDto
+  ) {
+    return this.postService.likePost({ ...likeDto, postId: +postId });
   }
 }
