@@ -9,7 +9,7 @@ export class PostService {
   constructor(
     private prisma: PrismaService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   private readonly s3Client = new S3Client({
     region: this.configService.getOrThrow('AWS_S3_REGION'),
@@ -69,7 +69,9 @@ export class PostService {
     });
 
     if (existingLike) {
-      throw new ConflictException('User already liked this post');
+      return this.prisma.like.delete({
+        where: { postId_userId: { postId, userId } },
+      });
     }
 
     return this.prisma.like.create({
@@ -79,6 +81,7 @@ export class PostService {
       },
     });
   }
+
 
   async createComment(postId: number, userId: number, content: string) {
     return this.prisma.comment.create({
@@ -117,7 +120,37 @@ export class PostService {
         comments: {
           select: {
             content: true,
-            user: { select: { username: true } },
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findPostsByUserId(userId: number) {
+    return this.prisma.post.findMany({
+      where: {
+        authorId: userId,
+      },
+      include: {
+        _count: {
+          select: { likes: true, comments: true },
+        },
+        comments: {
+          select: {
+            content: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
             createdAt: true,
           },
         },
