@@ -11,6 +11,7 @@ import { ChatModule } from './chat/chat.module';
 import { AppService } from './app.service';
 import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
 import { FriendshipModule } from './friendship/friendship.module';
+import { PostModule } from './post/post.module';
 
 
 @Module({
@@ -32,7 +33,8 @@ import { FriendshipModule } from './friendship/friendship.module';
     UserGameInterestModule,
     UserModule,
     ChatModule,
-    FriendshipModule
+    FriendshipModule,
+    PostModule
   ],
   controllers: [],
   providers: [

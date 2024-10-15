@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
-import { AuthenticatedSocket } from './dto/user-socket.interface'; // Ajuste o caminho conforme necessário
-import { Message } from './entities/message.entity'; // Ajuste o caminho conforme necessário
+import { AuthenticatedSocket } from './dto/user-socket.interface';
+import { Message } from './entities/message.entity';
 
 describe('ChatGateway', () => {
     let chatGateway: ChatGateway;
@@ -41,7 +41,6 @@ describe('ChatGateway', () => {
                 data: {
                     senderId: 5,
                     receiverId: 6
-                    // content e conversationId estão faltando
                 },
             };
 
@@ -54,10 +53,10 @@ describe('ChatGateway', () => {
             const payload = {
                 event: 'message',
                 data: new Message(
-                    5, // senderId
-                    6, // receiverId
-                    'Teste via WebSocket', // content
-                    2 // conversationId
+                    5,
+                    6,
+                    'Teste via WebSocket',
+                    2
                 ),
             };
 

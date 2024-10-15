@@ -6,7 +6,6 @@ import { Prisma } from '@prisma/client';
 export class ChatService {
     constructor(private prisma: PrismaService) { }
 
-    // Função para gerar ou buscar um ID de conversa entre dois usuários
     async getConversationId(senderId: number, receiverId: number): Promise<number> {
         if (!senderId || !receiverId) {
             throw new Error('Invalid senderId or receiverId');
@@ -17,9 +16,7 @@ export class ChatService {
             : receiverId * 100000 + senderId;
     }
 
-    // Função para criar uma nova mensagem com conversationId
     async createMessage(data: { senderId: number; receiverId: number; content: string }) {
-        // Verifique se os usuários existem
         const senderExists = await this.prisma.user.findUnique({
             where: { id: data.senderId },
         });
@@ -34,7 +31,6 @@ export class ChatService {
 
         const conversationId = await this.getConversationId(data.senderId, data.receiverId);
 
-        // Criar a mensagem
         return this.prisma.message.create({
             data: {
                 content: data.content,
@@ -56,7 +52,6 @@ export class ChatService {
     }
 
     async listConversations(userId: number) {
-        // Primeiro, buscamos todos os conversationIds relacionados ao usuário
         const conversations = await this.prisma.message.findMany({
             where: {
                 OR: [
@@ -67,17 +62,16 @@ export class ChatService {
             select: {
                 conversationId: true,
             },
-            distinct: ['conversationId'], // Garante que cada conversa seja única
+            distinct: ['conversationId'],
         });
 
-        // Para cada conversationId, buscamos a última mensagem
         const conversationsWithLastMessage = await Promise.all(
             conversations.map(async (conversation) => {
                 const lastMessage = await this.prisma.message.findFirst({
                     where: {
                         conversationId: conversation.conversationId,
                     },
-                    orderBy: { createdAt: 'desc' }, // Busca a última mensagem pela data
+                    orderBy: { createdAt: 'desc' },
                     include: {
                         messageSender: {
                             select: {
