@@ -15,20 +15,23 @@ model User {
   profilePictureUrl String?
   bio               String?
 
+  gamesAdded Game[] @relation("AddedGames")
+
   followers Int @default(0)
   following Int @default(0)
 
-  createdAt           DateTime     @default(now())
-  receivedFriendships Friendship[] @relation("ReceivedFriendships")
-  sentFriendships     Friendship[] @relation("SentFriendships")
+  createdAt           DateTime      @default(now())
+  receivedFriendships Friendship[]  @relation("ReceivedFriendships")
+  sentFriendships     Friendship[]  @relation("SentFriendships")
   GameUser            GameUser[]
-  receivedMessages    Message[]    @relation("ReceiverMessages")
-  sentMessages        Message[]    @relation("SenderMessages")
-  games               Game[]       @relation("GameToUser")
+  receivedMessages    Message[]     @relation("ReceiverMessages")
+  sentMessages        Message[]     @relation("SenderMessages")
+  games               Game[]        @relation("GameToUser")
   posts               Post[]
   views               View[]
   Like                Like[]
   Comment             Comment[]
+  Subscription        Subscription?
 }
 
 model Game {
@@ -38,6 +41,9 @@ model Game {
   gameimageUrl String?
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
+
+  addedBy User? @relation("AddedGames", fields: [userId], references: [id])
+  userId  Int?
 }
 
 model GameUser {
@@ -118,4 +124,15 @@ model Comment {
   user    User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  type      String
+  price     Float
+  isActive  Boolean  @default(true)
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -25,4 +25,9 @@ export class UserController {
   remove(@Param('id') id: number) {
     return this.usersService.remove(id);
   }
+
+  @Get('profile/:userId')
+  async getUserProfile(@Param('userId') userId: number) {
+    return this.usersService.getUserProfile(userId);
+  }
 }
