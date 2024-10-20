@@ -1,5 +1,7 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ForbiddenException, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { CreateGameDto } from './dto/create-game.dto';
 
 @Injectable()
 export class GamesService implements OnModuleInit {
@@ -13,7 +15,8 @@ export class GamesService implements OnModuleInit {
         { name: 'Counter Strike 2', imageUrl: 'https://media.steampowered.com/apps/csgo/blog/images/fb_image.png?v=6' },
     ];
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService,
+        private readonly subscriptionService: SubscriptionService) { }
 
     async onModuleInit() {
         await this.initializeGames();
@@ -43,4 +46,39 @@ export class GamesService implements OnModuleInit {
             },
         });
     }
+
+    async addGame(userId: number, createGameDto: CreateGameDto) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { Subscription: true }, // Inclui a relação com Subscription
+        });
+
+        if (!user || !user.Subscription || user.Subscription.type !== 'GameDev') {
+            throw new ForbiddenException('Apenas usuários com o plano GameDev podem adicionar jogos.');
+        }
+
+        return this.prisma.game.create({
+            data: {
+                name: createGameDto.name,
+                description: createGameDto.description,
+                gameimageUrl: createGameDto.gameimageUrl,
+                addedBy: {
+                    connect: { id: userId },
+                },
+            },
+        });
+    }
+
+    async getGamesByUser(userId: number) {
+        return this.prisma.game.findMany({
+            where: { addedBy: { id: userId } },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                gameimageUrl: true,
+            },
+        });
+    }
+
 }

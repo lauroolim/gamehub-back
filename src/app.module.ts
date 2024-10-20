@@ -12,6 +12,8 @@ import { AppService } from './app.service';
 import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
 import { FriendshipModule } from './friendship/friendship.module';
 import { PostModule } from './post/post.module';
+import { SubscriptionModule } from './subscription/subscription.module';
+import { TesteModule } from './teste/teste.module';
 
 
 @Module({
@@ -34,7 +36,9 @@ import { PostModule } from './post/post.module';
     UserModule,
     ChatModule,
     FriendshipModule,
-    PostModule
+    PostModule,
+    SubscriptionModule,
+    TesteModule
   ],
   controllers: [],
   providers: [

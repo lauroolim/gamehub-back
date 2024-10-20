@@ -5,7 +5,7 @@ import { FriendshipService } from '../friendship/friendship.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async findAll() {
     return this.prismaService.user.findMany({
@@ -93,5 +93,24 @@ export class UserService {
         id: id,
       },
     });
+  }
+
+  async getUserProfile(userId: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        gamesAdded: true,
+        Subscription: true,
+      },
+    });
+
+    return {
+      username: user.username,
+      bio: user.bio,
+      profilePictureUrl: user.profilePictureUrl,
+      gamesAdded: user.gamesAdded,
+      subscriptionType: user.Subscription?.type,
+      isGameDev: user.Subscription?.type === 'GameDev',
+    };
   }
 }
