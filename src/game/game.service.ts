@@ -50,7 +50,7 @@ export class GamesService implements OnModuleInit {
     async addGame(userId: number, createGameDto: CreateGameDto) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            include: { Subscription: true }, // Inclui a relação com Subscription
+            include: { Subscription: true },
         });
 
         if (!user || !user.Subscription || user.Subscription.type !== 'GameDev') {

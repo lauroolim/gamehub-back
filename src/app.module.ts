@@ -13,7 +13,6 @@ import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
 import { FriendshipModule } from './friendship/friendship.module';
 import { PostModule } from './post/post.module';
 import { SubscriptionModule } from './subscription/subscription.module';
-import { TesteModule } from './teste/teste.module';
 
 
 @Module({
@@ -38,7 +37,6 @@ import { TesteModule } from './teste/teste.module';
     FriendshipModule,
     PostModule,
     SubscriptionModule,
-    TesteModule
   ],
   controllers: [],
   providers: [
