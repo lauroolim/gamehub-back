@@ -12,4 +12,8 @@ export class CreateGameDto {
     @IsOptional()
     @IsUrl()
     gameimageUrl?: string;
+
+    @IsOptional()
+    @IsString()
+    category?: string;
 }
