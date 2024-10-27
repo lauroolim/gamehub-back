@@ -16,11 +16,10 @@ model User {
   bio               String?
 
   gamesAdded Game[] @relation("AddedGames")
+  followers Int     @default(0)
+  following Int     @default(0)
 
-  followers Int @default(0)
-  following Int @default(0)
-
-  createdAt           DateTime      @default(now())
+  Subscription        Subscription? // Relação com assinatura
   receivedFriendships Friendship[]  @relation("ReceivedFriendships")
   sentFriendships     Friendship[]  @relation("SentFriendships")
   GameUser            GameUser[]
@@ -31,7 +30,33 @@ model User {
   views               View[]
   Like                Like[]
   Comment             Comment[]
-  Subscription        Subscription?
+
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id              Int         @id @default(autoincrement())
+  stripeId        String?     // ID da assinatura no Stripe
+  type            String      // Ex: "GameDev Basic", "GameDev"
+  price           Float       // Ex: 5.90 ou 19.90
+  isActive        Boolean     @default(true)
+  userId          Int         @unique
+  user            User        @relation(fields: [userId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  expiresAt       DateTime    // Data de expiração
+  stripeSessionId  String   // Novo campo para armazenar o ID da sessão Stripe
+
+  planChanges     PlanChange[] // Correção: Relacionamento com PlanChange
+}
+
+model PlanChange {
+  id                Int          @id @default(autoincrement())
+  subscriptionId    Int
+  oldPlan           String       // Ex: "GameDev Basic"
+  newPlan           String       // Ex: "GameDev"
+  changedAt         DateTime     @default(now())
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id])
 }
 
 model Game {
@@ -124,15 +149,4 @@ model Comment {
   user    User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
-}
-
-model Subscription {
-  id        Int      @id @default(autoincrement())
-  type      String
-  price     Float
-  isActive  Boolean  @default(true)
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

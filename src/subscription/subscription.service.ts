@@ -8,14 +8,21 @@ export class SubscriptionService {
 
     async createSubscription(userId: number, type: string) {
         const price = type === 'GameDev' ? 19.9 : 5.9;
+        
+        // Define a data de expiração para 30 dias no futuro
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+    
         return this.prisma.subscription.create({
-            data: {
-                type,
-                price,
-                user: { connect: { id: userId } },
-            },
+          data: {
+            type,
+            price,
+            user: { connect: { id: userId } },
+            expiresAt, // Campo obrigatório
+            stripeSessionId: 'dummy-session-id', // Substitua pelo valor correto ou integre com o Stripe
+          },
         });
-    }
+      }
 
     async getSubscription(userId: number) {
         return this.prisma.subscription.findUnique({
