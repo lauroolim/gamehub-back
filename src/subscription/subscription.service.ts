@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
-import { Prisma } from '@prisma/client';
 import Stripe from 'stripe';
 import { UserService } from '../user/user.service';
 
@@ -12,49 +11,44 @@ export class SubscriptionService {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-09-30.acacia' });
     }
 
-    async createCheckoutSession(userId: number, priceId: string, successUrl: string, cancelUrl: string) {
-        try {
-            const session = await this.stripe.checkout.sessions.create({
-                payment_method_types: ['card'],
-                line_items: [
-                    {
-                        price: priceId, // Use o ID do preço criado no Stripe
-                        quantity: 1,
-                    },
-                ],
-                mode: 'subscription',
-                success_url: successUrl,
-                cancel_url: cancelUrl,
-                metadata: {
-                    userId: userId.toString(),
-                },
-            });
+    private getPrice(type: string): number {
+        switch (type) {
+            case 'GameDev':
+                return 19.9;
+            case 'GameDev Basic':
+                return 5.9;
+            default:
+                throw new BadRequestException('Tipo de assinatura inválido.');
+        }
+    }
 
+    private async createStripeSession(priceId: string): Promise<Stripe.Checkout.Session> {
+        return this.stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{ price: priceId, quantity: 1 }],
+            mode: 'subscription',
+            success_url: 'https://your-app.com/success',
+            cancel_url: 'https://your-app.com/cancel',
+        });
+    }
+
+    async createCheckoutSession(userId: number, priceId: string) {
+        try {
+            const session = await this.createStripeSession(priceId);
             return session;
         } catch (error) {
             throw new BadRequestException(error.message);
         }
     }
 
-
-
-
     async createSubscription(userId: number, type: string) {
-        const price = type === 'GameDev' ? 19.9 : 5.9;
-
+        const price = this.getPrice(type);
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
         if (!user) throw new BadRequestException('Usuário não encontrado.');
 
-        const session = await this.stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [{ price_data: { currency: 'brl', product_data: { name: type }, unit_amount: price * 100 }, quantity: 1 }],
-            mode: 'subscription',
-            success_url: 'https://your-app.com/success',
-            cancel_url: 'https://your-app.com/cancel',
-        });
-
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
+        const session = await this.createStripeSession(type);
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
         return this.prisma.subscription.create({
             data: {
@@ -89,9 +83,7 @@ export class SubscriptionService {
     }
 
     async getSubscription(userId: number) {
-        return this.prisma.subscription.findUnique({
-            where: { userId },
-        });
+        return this.prisma.subscription.findUnique({ where: { userId } });
     }
 
     async cancelSubscription(userId: number) {
@@ -102,8 +94,7 @@ export class SubscriptionService {
     }
 
     async renewSubscription(userId: number) {
-        const newExpiryDate = new Date();
-        newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+        const newExpiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
         return this.prisma.subscription.update({
             where: { userId },
