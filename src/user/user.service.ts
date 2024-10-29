@@ -1,7 +1,6 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FriendshipService } from '../friendship/friendship.service';
 
 @Injectable()
 export class UserService {
@@ -16,9 +15,12 @@ export class UserService {
         profilePictureUrl: true,
         followers: true,
         following: true,
-        GameUser: {
-          include: {
-            game: true,
+        gamesAdded: true,
+        Subscription: {
+          select: {
+            type: true,
+            isActive: true,
+            expiresAt: true,
           },
         },
       },
@@ -35,16 +37,47 @@ export class UserService {
         profilePictureUrl: true,
         followers: true,
         following: true,
+        Subscription: {
+          select: {
+            type: true,
+            isActive: true,
+            expiresAt: true,
+          },
+        },
         GameUser: {
           include: {
             game: true,
+          },
+        },
+        receivedFriendships: {
+          where: { status: 'accepted' },
+          select: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        sentFriendships: {
+          where: { status: 'accepted' },
+          select: {
+            receiver: {
+              select: {
+                id: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!user) {
-      throw new InternalServerErrorException('User not found');
+      throw new NotFoundException('User not found');
     }
 
     return user;
@@ -55,32 +88,24 @@ export class UserService {
 
     const updateData: any = {};
 
-    if (username) {
-      updateData.username = username;
-    }
-
-    if (profilePictureUrl) {
-      updateData.profilePictureUrl = profilePictureUrl;
-    }
-
-    if (bio !== undefined) {
-      updateData.bio = bio;
-    } else {
-      updateData.bio = '';
-    }
+    if (username) updateData.username = username;
+    if (profilePictureUrl) updateData.profilePictureUrl = profilePictureUrl;
+    if (bio !== undefined) updateData.bio = bio;
 
     if (gameIds) {
-      updateData.games = {
-        connect: gameIds.map((gameId) => ({ id: gameId })),
+      updateData.GameUser = {
+        connect: gameIds.map((gameId) => ({ gameId })),
       };
     }
 
     try {
       return await this.prismaService.user.update({
-        where: {
-          id: id,
-        },
+        where: { id },
         data: updateData,
+        include: {
+          gamesAdded: true,
+          Subscription: true,
+        },
       });
     } catch (error) {
       throw new InternalServerErrorException(error.message);
@@ -88,11 +113,13 @@ export class UserService {
   }
 
   async remove(id: number) {
-    return this.prismaService.user.delete({
-      where: {
-        id: id,
-      },
-    });
+    try {
+      return await this.prismaService.user.delete({
+        where: { id },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error deleting user');
+    }
   }
 
   async getUserProfile(userId: number) {
@@ -101,16 +128,38 @@ export class UserService {
       include: {
         gamesAdded: true,
         Subscription: true,
+        receivedFriendships: {
+          select: {
+            sender: {
+              select: { id: true, username: true, profilePictureUrl: true },
+            },
+          },
+        },
+        sentFriendships: {
+          select: {
+            receiver: {
+              select: { id: true, username: true, profilePictureUrl: true },
+            },
+          },
+        },
       },
     });
 
+    if (!user) throw new NotFoundException('User not found');
+
     return {
+      id: user.id,
       username: user.username,
       bio: user.bio,
       profilePictureUrl: user.profilePictureUrl,
+      followers: user.followers,
+      following: user.following,
       gamesAdded: user.gamesAdded,
       subscriptionType: user.Subscription?.type,
+      subscriptionExpiresAt: user.Subscription?.expiresAt,
       isGameDev: user.Subscription?.type === 'GameDev',
+      receivedFriendships: user.receivedFriendships,
+      sentFriendships: user.sentFriendships,
     };
   }
 }

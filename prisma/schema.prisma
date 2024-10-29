@@ -14,13 +14,13 @@ model User {
   password          String
   profilePictureUrl String?
   bio               String?
+  stamp             Boolean @default(false)
 
   gamesAdded Game[] @relation("AddedGames")
+  followers  Int    @default(0)
+  following  Int    @default(0)
 
-  followers Int @default(0)
-  following Int @default(0)
-
-  createdAt           DateTime      @default(now())
+  Subscription        Subscription? // Relação com assinatura
   receivedFriendships Friendship[]  @relation("ReceivedFriendships")
   sentFriendships     Friendship[]  @relation("SentFriendships")
   GameUser            GameUser[]
@@ -31,7 +31,33 @@ model User {
   views               View[]
   Like                Like[]
   Comment             Comment[]
-  Subscription        Subscription?
+
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id              Int      @id @default(autoincrement())
+  stripeId        String?
+  type            String
+  price           Float
+  isActive        Boolean  @default(true)
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  expiresAt       DateTime
+  stripeSessionId String
+
+  planChanges PlanChange[]
+}
+
+model PlanChange {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  oldPlan        String
+  newPlan        String
+  changedAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
 }
 
 model Game {
@@ -124,15 +150,4 @@ model Comment {
   user    User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
-}
-
-model Subscription {
-  id        Int      @id @default(autoincrement())
-  type      String
-  price     Float
-  isActive  Boolean  @default(true)
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

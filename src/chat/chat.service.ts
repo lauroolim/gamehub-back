@@ -42,7 +42,6 @@ export class ChatService {
     }
 
 
-    // Função para buscar mensagens entre dois usuários
     async getMessages(senderId: number, receiverId: number) {
         const conversationId = await this.getConversationId(senderId, receiverId);
         return this.prisma.message.findMany({

@@ -10,5 +10,6 @@ import { FriendshipModule } from '../friendship/friendship.module';
   imports: [PrismaModule, FriendshipModule],
   controllers: [UserController],
   providers: [UserService, PrismaService],
+  exports: [UserService],
 })
 export class UserModule { }
