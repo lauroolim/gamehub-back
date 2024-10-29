@@ -5,12 +5,15 @@ import { SubscriptionService } from './subscription.service';
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) { }
 
+
   @Post('checkout-session')
   async createCheckoutSession(
     @Body('userId') userId: number,
-    @Body('type') type: string,
+    @Body('type') type: 'GameDev' | 'GameDev Basic',
+    @Body('successUrl') successUrl: string,
+    @Body('cancelUrl') cancelUrl: string,
   ) {
-    return this.subscriptionService.createCheckoutSession(userId, type);
+    return this.subscriptionService.createCheckoutSession(userId, type, successUrl, cancelUrl);
   }
 
   @Patch(':userId')
