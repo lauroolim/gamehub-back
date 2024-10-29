@@ -12,72 +12,89 @@ export class StripeService {
     });
   }
 
-  private getPriceId(plan: 'basic' | 'premium'): string {
-    return plan === 'basic'
-      ? process.env.STRIPE_BASIC_PLAN_ID
-      : process.env.STRIPE_PREMIUM_PLAN_ID;
+  public constructEventFromWebhook(payload: Buffer, signature: string): Stripe.Event {
+    return this.stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   }
 
-  async createOrUpdateSubscription(userId: number, plan: 'basic' | 'premium') {
-    try {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-      }
+  async handleWebhookEvent(event: Stripe.Event) {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await this.handleCheckoutSessionCompleted(event);
+        break;
+      case 'invoice.payment_succeeded':
+        await this.handlePaymentSucceeded(event);
+        break;
+      case 'invoice.payment_failed':
+        await this.handlePaymentFailed(event);
+        break;
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+  }
 
-      const existingSubscription = await this.prisma.subscription.findUnique({
-        where: { userId },
-      });
+  private async handleCheckoutSessionCompleted(event: Stripe.Event) {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = Number(session.client_reference_id);
 
+    if (!userId) {
+      throw new HttpException('Invalid session data: Missing user ID', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        Subscription: {
+          update: {
+            stripeId: session.subscription as string,
+            stripeSessionId: session.id,
+            isActive: true,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias de validade
+          },
+        },
+      },
+    });
+  }
+
+  private async handlePaymentSucceeded(event: Stripe.Event) {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerEmail = invoice.customer_email;
+
+    if (!customerEmail) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: customerEmail },
+    });
+
+    if (user) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
-      if (existingSubscription) {
-        await this.stripe.subscriptions.update(existingSubscription.id.toString(), {
-          items: [{ price: this.getPriceId(plan) }],
-          proration_behavior: 'none',
-        });
+      await this.prisma.subscription.updateMany({
+        where: { userId: user.id },
+        data: { isActive: true, expiresAt },
+      });
+    }
+  }
 
-        await this.prisma.subscription.update({
-          where: { userId },
-          data: {
-            type: plan,
-            price: plan === 'basic' ? 5.9 : 19.9,
-            expiresAt,
-          },
-        });
+  private async handlePaymentFailed(event: Stripe.Event) {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerEmail = invoice.customer_email;
 
-        return { message: 'Subscription updated successfully' };
-      } else {
-        const session = await this.stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          mode: 'subscription',
-          customer_email: user.email,
-          line_items: [
-            {
-              price: this.getPriceId(plan),
-              quantity: 1,
-            },
-          ],
-          success_url: `http://localhost:3000/sucesso`,
-          cancel_url: `http://localhost:3000/cancelado`,
-        });
+    if (!customerEmail) return;
 
-        await this.prisma.subscription.create({
-          data: {
-            stripeSessionId: session.id, // Armazena o ID da sessão Stripe
-            userId,
-            type: plan,
-            price: plan === 'basic' ? 5.9 : 19.9,
-            isActive: true,
-            expiresAt,
-          },
-        });
+    const user = await this.prisma.user.findUnique({
+      where: { email: customerEmail },
+    });
 
-        return { sessionId: session.id };
-      }
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    if (user) {
+      await this.prisma.subscription.updateMany({
+        where: { userId: user.id },
+        data: { isActive: false },
+      });
     }
   }
 }
