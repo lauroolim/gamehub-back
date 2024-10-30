@@ -1,6 +1,7 @@
 import { Controller, Post, Req, Res, HttpException, HttpStatus } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request, Response } from 'express';
+import Stripe from 'stripe';
 
 @Controller('stripe')
 export class StripeController {
@@ -9,20 +10,23 @@ export class StripeController {
   @Post('webhook')
   async handleWebhook(@Req() req: Request, @Res() res: Response) {
     const sig = req.headers['stripe-signature'] as string;
+    const payload = req.body;
 
-    let event;
+    let event: Stripe.Event;
+
     try {
-      event = this.stripeService.constructEventFromWebhook(req.body, sig);
+      event = this.stripeService.constructEventFromWebhook(payload, sig);
     } catch (err) {
-      console.log(`Webhook signature verification failed: ${err.message}`);
+      console.error(`⚠️  Erro ao verificar assinatura: ${err.message}`);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     try {
       await this.stripeService.handleWebhookEvent(event);
-      return res.status(200).send({ received: true });
+      res.json({ received: true });
     } catch (error) {
-      throw new HttpException(`Webhook handling error: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      console.error(`Erro ao processar evento: ${error.message}`);
+      res.status(500).send(`Webhook handler error: ${error.message}`);
     }
   }
 }

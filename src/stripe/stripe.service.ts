@@ -1,12 +1,12 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../shared/database/prisma.service';
-
+import { SubscriptionService } from '../subscription/subscription.service';
 @Injectable()
 export class StripeService {
   private stripe: Stripe;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(private readonly prisma: PrismaService, private readonly subscriptionService: SubscriptionService) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2024-09-30.acacia',
     });
@@ -36,27 +36,22 @@ export class StripeService {
     }
   }
 
-  private async handleCheckoutSessionCompleted(event: Stripe.Event) {
+  async handleCheckoutSessionCompleted(event: Stripe.Event) {
     const session = event.data.object as Stripe.Checkout.Session;
-    const userId = Number(session.client_reference_id);
+
+    // Obter o userId do metadata
+    const userIdString = session.metadata['userId'];
+    const userId = parseInt(userIdString, 10);
+
+    const subscriptionId = session.subscription as string;
+    const customerId = session.customer as string;
 
     if (!userId) {
-      throw new HttpException('Invalid session data: Missing user ID', HttpStatus.BAD_REQUEST);
+      console.error('userId não encontrado no metadata da sessão.');
+      return;
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        Subscription: {
-          update: {
-            stripeId: session.subscription as string,
-            stripeSessionId: session.id,
-            isActive: true,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias de validade
-          },
-        },
-      },
-    });
+    await this.subscriptionService.createSubscription(userId, subscriptionId, customerId);
   }
 
   private async handlePaymentSucceeded(event: Stripe.Event) {

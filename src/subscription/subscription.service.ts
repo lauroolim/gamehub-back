@@ -14,7 +14,12 @@ export class SubscriptionService {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-09-30.acacia' });
     }
 
-    async createCheckoutSession(userId: number, type: string, successUrl: string, cancelUrl: string) {
+    async createCheckoutSession(
+        userId: number,
+        type: string,
+        successUrl: string,
+        cancelUrl: string,
+    ) {
         const priceId = this.getPriceIdByType(type);
 
         if (!priceId) {
@@ -53,24 +58,40 @@ export class SubscriptionService {
         }
     }
 
-    async createSubscription(userId: number, type: string) {
-        const price = this.getPriceIdByType(type);
+    private getTypeByPriceId(priceId: string): string | null {
+        if (priceId === process.env.STRIPE_PRICE_GAMEDEV) {
+            return 'GameDev';
+        } else if (priceId === process.env.STRIPE_PRICE_GAMEDEV_BASIC) {
+            return 'GameDev Basic';
+        }
+        return null;
+    }
+
+    async createSubscription(
+        userId: number,
+        stripeSubscriptionId: string,
+        stripeCustomerId: string,
+    ) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
         if (!user) throw new BadRequestException('Usuário não encontrado.');
-        if (!price) throw new BadRequestException('Tipo de assinatura inválido.');
 
-        const session = await this.createCheckoutSession(userId, type, '', '');
-        const expiresAt = this.getExpiryDate();
+        const stripeSubscription = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
+        const type = this.getTypeByPriceId(stripeSubscription.items.data[0].price.id);
+
+        if (!type) throw new BadRequestException('Tipo de assinatura inválido.');
+
+        const priceAmount = stripeSubscription.items.data[0].price.unit_amount / 100;
 
         return this.prisma.subscription.create({
             data: {
-                type,
-                price: parseFloat(price),
-                isActive: true,
                 userId,
-                stripeSessionId: session.id,
-                expiresAt,
+                type,
+                price: priceAmount,
+                isActive: true,
+                stripeId: stripeSubscriptionId,
+                stripeCustomerId: stripeCustomerId,
+                expiresAt: this.getExpiryDate(),
             },
         });
     }

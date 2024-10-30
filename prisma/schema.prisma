@@ -36,17 +36,17 @@ model User {
 }
 
 model Subscription {
-  id              Int      @id @default(autoincrement())
-  stripeId        String?
-  type            String
-  price           Float
-  isActive        Boolean  @default(true)
-  userId          Int      @unique
-  user            User     @relation(fields: [userId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  expiresAt       DateTime
-  stripeSessionId String
+  id               Int      @id @default(autoincrement())
+  type             String
+  price            Float
+  isActive         Boolean  @default(true)
+  userId           Int      @unique
+  user             User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  expiresAt        DateTime
+  stripeId         String
+  stripeCustomerId String
 
   planChanges PlanChange[]
 }
