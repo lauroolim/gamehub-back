@@ -14,7 +14,8 @@ import { FriendshipModule } from './friendship/friendship.module';
 import { PostModule } from './post/post.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { StripeModule } from './stripe/stripe.module';
-import { SubscriptionController } from './subscription/subscription.controller'; // Adição necessária
+import { SubscriptionController } from './subscription/subscription.controller';
+import { S3Module } from './shared/services/s3.module';
 
 @Module({
   imports: [
@@ -40,8 +41,9 @@ import { SubscriptionController } from './subscription/subscription.controller';
     PostModule,
     SubscriptionModule,
     StripeModule,
+    S3Module,
   ],
-  controllers: [SubscriptionController], // Registra o controller
+  controllers: [SubscriptionController],
   providers: [
     AppService,
     {
@@ -50,4 +52,4 @@ import { SubscriptionController } from './subscription/subscription.controller';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

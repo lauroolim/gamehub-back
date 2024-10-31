@@ -9,7 +9,6 @@ export class SubscriptionService {
 
     constructor(
         private prisma: PrismaService,
-        private readonly userService: UserService
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-09-30.acacia' });
     }
