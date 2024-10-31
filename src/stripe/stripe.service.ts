@@ -39,7 +39,6 @@ export class StripeService {
   async handleCheckoutSessionCompleted(event: Stripe.Event) {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    // Obter o userId do metadata
     const userIdString = session.metadata['userId'];
     const userId = parseInt(userIdString, 10);
 

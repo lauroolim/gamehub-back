@@ -64,6 +64,7 @@ model Game {
   id           Int        @id @default(autoincrement())
   name         String     @unique
   description  String?
+  category     String?
   gameimageUrl String?
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
