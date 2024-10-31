@@ -57,11 +57,17 @@ export class GamesService implements OnModuleInit {
     async addGame(userId: number, createGameDto: CreateGameDto, file?: Express.Multer.File) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            include: { Subscription: true },
+            include: { Subscription: true, gamesAdded: true },
         });
 
-        if (!user || !user.Subscription || user.Subscription.type !== 'GameDev') {
-            throw new ForbiddenException('Apenas usuários com o plano GameDev podem adicionar jogos.');
+        if (!user || !user.Subscription) {
+            throw new ForbiddenException('Apenas usuários assinantes podem adicionar jogos.');
+        }
+
+        const maxGames = user.Subscription.type === 'GameDev' ? 10 : 2;
+
+        if (user.gamesAdded.length >= maxGames) {
+            throw new ForbiddenException(`Limite de jogos adicionados atingido: ${maxGames} jogos permitidos para seu plano.`);
         }
 
         let imageUrl = createGameDto.gameimageUrl;
