@@ -12,8 +12,13 @@ export class CreateGameDto {
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'URL da imagem do jogo (opcional se o arquivo for fornecido)' })
-    @IsOptional()
+    @ApiProperty({ description: 'URL da imagem do jogo (opcional se o arquivo for fornecido)' })
+    @IsNotEmpty()
     @IsString()
-    gameimageUrl?: string;
+    gameimageUrl: string;
+
+    @ApiProperty({ description: 'Categoria do jogo' })
+    @IsNotEmpty()
+    @IsString()
+    category: string;
 }

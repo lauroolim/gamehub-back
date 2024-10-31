@@ -86,6 +86,7 @@ export class GamesService implements OnModuleInit {
                 name: createGameDto.name,
                 description: createGameDto.description,
                 gameimageUrl: imageUrl,
+                category: createGameDto.category,
                 addedBy: {
                     connect: { id: userId },
                 },

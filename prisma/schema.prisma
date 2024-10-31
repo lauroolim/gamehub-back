@@ -20,7 +20,7 @@ model User {
   followers  Int    @default(0)
   following  Int    @default(0)
 
-  Subscription        Subscription? // Relação com assinatura
+  Subscription        Subscription?
   receivedFriendships Friendship[]  @relation("ReceivedFriendships")
   sentFriendships     Friendship[]  @relation("SentFriendships")
   GameUser            GameUser[]
