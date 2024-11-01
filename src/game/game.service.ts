@@ -81,7 +81,7 @@ export class GamesService implements OnModuleInit {
             imageUrl = createGameDto.gameimageUrl;
         }
 
-        return this.prisma.game.create({
+        const game = await this.prisma.game.create({
             data: {
                 name: createGameDto.name,
                 description: createGameDto.description,
@@ -92,6 +92,15 @@ export class GamesService implements OnModuleInit {
                 },
             },
         });
+
+        await this.prisma.gameUser.create({
+            data: {
+                userId: userId,
+                gameId: game.id,
+            },
+        });
+
+        return game;
     }
 
     async getGamesByUser(userId: number) {
