@@ -2,6 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import Stripe from 'stripe';
 import { UserService } from '../user/user.service';
+import { EmailService } from '../alerta_email/email.service'; // Import do serviço de e-mail
+import { Cron, CronExpression } from '@nestjs/schedule'; // Import do cron job
 
 @Injectable()
 export class SubscriptionService {
@@ -9,7 +11,8 @@ export class SubscriptionService {
 
     constructor(
         private prisma: PrismaService,
-        private readonly userService: UserService
+        private readonly userService: UserService,
+        private readonly emailService: EmailService, // Inserido o serviço de e-mail para fazer os alertas de expiração de assinatura
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-09-30.acacia' });
     }
@@ -118,5 +121,33 @@ export class SubscriptionService {
 
     private getExpiryDate(): Date {
         return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // Esse Cron job verifica quais as assinaturas estão próximas de expirar
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)//Essa parte faz a verificação sempre à meia-noite de cada dia
+    async checkExpiringSubscriptions() {
+        const today = new Date();
+        const inThreeDays = new Date();
+        inThreeDays.setDate(today.getDate() + 3);
+
+        const expiringSubscriptions = await this.prisma.subscription.findMany({
+            where: {
+                expiresAt: { lte: inThreeDays },
+                isActive: true,
+            },
+            include: { user: true },
+        });
+
+        for (const subscription of expiringSubscriptions) {
+            const daysLeft = Math.ceil(
+                (subscription.expiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            await this.emailService.sendExpirationAlert(
+                subscription.user.email,
+                subscription.type,
+                daysLeft
+            );
+        }
     }
 }

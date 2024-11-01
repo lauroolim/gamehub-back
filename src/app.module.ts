@@ -15,6 +15,8 @@ import { PostModule } from './post/post.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { StripeModule } from './stripe/stripe.module';
 import { SubscriptionController } from './subscription/subscription.controller'; // Adição necessária
+import { EmailModule } from './alerta_email/email.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -40,8 +42,10 @@ import { SubscriptionController } from './subscription/subscription.controller';
     PostModule,
     SubscriptionModule,
     StripeModule,
+    ScheduleModule.forRoot(),
+    EmailModule,
   ],
-  controllers: [SubscriptionController], // Registra o controller
+  controllers: [SubscriptionController], 
   providers: [
     AppService,
     {
