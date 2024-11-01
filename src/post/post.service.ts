@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PrismaService } from '../shared/database/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -84,21 +84,29 @@ export class PostService {
 
 
   async createComment(postId: number, userId: number, content: string) {
-    return this.prisma.comment.create({
-      data: {
-        postId,
-        userId,
-        content,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
+    try {
+      const post = await this.prisma.post.findUnique({ where: { id: postId } });
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+
+      return await this.prisma.comment.create({
+        data: {
+          content,
+          post: { connect: { id: postId } },
+          user: { connect: { id: userId } },
+        },
+        include: {
+          user: {
+            select: {
+              profilePictureUrl: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error creating comment');
+    }
   }
 
   async removeComment(postId: number, commentId: number) {
@@ -124,6 +132,7 @@ export class PostService {
               select: {
                 id: true,
                 username: true,
+                profilePictureUrl: true,
               },
             },
             createdAt: true,
@@ -149,6 +158,7 @@ export class PostService {
               select: {
                 id: true,
                 username: true,
+                profilePictureUrl: true,
               },
             },
             createdAt: true,

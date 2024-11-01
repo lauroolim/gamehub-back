@@ -11,6 +11,7 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -88,7 +89,11 @@ export class PostController {
     @Param('postId') postId: string,
     @Body() body: { userId: string; content: string },
   ) {
-    return this.postService.createComment(+postId, +body.userId, body.content);
+    try {
+      return await this.postService.createComment(+postId, +body.userId, body.content);
+    } catch (error) {
+      throw new InternalServerErrorException('Error commenting on post');
+    }
   }
 
   @Get(':postId/details')

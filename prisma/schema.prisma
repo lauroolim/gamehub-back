@@ -14,30 +14,63 @@ model User {
   password          String
   profilePictureUrl String?
   bio               String?
+  stamp             Boolean @default(false)
 
-  followers Int @default(0)
-  following Int @default(0)
+  gamesAdded Game[] @relation("AddedGames")
+  followers  Int    @default(0)
+  following  Int    @default(0)
 
-  createdAt           DateTime     @default(now())
-  receivedFriendships Friendship[] @relation("ReceivedFriendships")
-  sentFriendships     Friendship[] @relation("SentFriendships")
+  Subscription        Subscription?
+  receivedFriendships Friendship[]  @relation("ReceivedFriendships")
+  sentFriendships     Friendship[]  @relation("SentFriendships")
   GameUser            GameUser[]
-  receivedMessages    Message[]    @relation("ReceiverMessages")
-  sentMessages        Message[]    @relation("SenderMessages")
-  games               Game[]       @relation("GameToUser")
+  receivedMessages    Message[]     @relation("ReceiverMessages")
+  sentMessages        Message[]     @relation("SenderMessages")
+  games               Game[]        @relation("GameToUser")
   posts               Post[]
   views               View[]
   Like                Like[]
   Comment             Comment[]
+
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id               Int      @id @default(autoincrement())
+  type             String
+  price            Float
+  isActive         Boolean  @default(true)
+  userId           Int      @unique
+  user             User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  expiresAt        DateTime
+  stripeId         String
+  stripeCustomerId String
+
+  planChanges PlanChange[]
+}
+
+model PlanChange {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  oldPlan        String
+  newPlan        String
+  changedAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
 }
 
 model Game {
   id           Int        @id @default(autoincrement())
   name         String     @unique
   description  String?
+  category     String?
   gameimageUrl String?
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
+
+  addedBy User? @relation("AddedGames", fields: [userId], references: [id])
+  userId  Int?
 }
 
 model GameUser {

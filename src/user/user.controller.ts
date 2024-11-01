@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('users')
 export class UserController {
@@ -17,8 +18,23 @@ export class UserController {
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() body: UpdateUserDto) {
-    return this.usersService.update(id, body);
+  @UseInterceptors(FileInterceptor('profilePicture', {
+    fileFilter: (req, file, cb) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+        return cb(new BadRequestException('Only image files are allowed!'), false);
+      }
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024
+    }
+  }))
+  async updateProfile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.usersService.updateProfile(id, updateUserDto, file);
   }
 
   @Delete(':id')

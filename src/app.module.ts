@@ -12,21 +12,25 @@ import { AppService } from './app.service';
 import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
 import { FriendshipModule } from './friendship/friendship.module';
 import { PostModule } from './post/post.module';
-
+import { SubscriptionModule } from './subscription/subscription.module';
+import { StripeModule } from './stripe/stripe.module';
+import { SubscriptionController } from './subscription/subscription.controller';
+import { S3Module } from './shared/services/s3.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true,
-    envFilePath: '.env',
-  }),
-  JwtModule.registerAsync({
-    useFactory: async (configService: ConfigService) => ({
-      global: true,
-      secret: configService.getOrThrow('JWT_SECRET'),
-      signOptions: { expiresIn: '1d' },
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
     }),
-    inject: [ConfigService],
-  }),
+    JwtModule.registerAsync({
+      useFactory: async (configService: ConfigService) => ({
+        global: true,
+        secret: configService.getOrThrow('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' },
+      }),
+      inject: [ConfigService],
+    }),
     PrismaModule,
     AuthModule,
     GameModule,
@@ -34,14 +38,18 @@ import { PostModule } from './post/post.module';
     UserModule,
     ChatModule,
     FriendshipModule,
-    PostModule
+    PostModule,
+    SubscriptionModule,
+    StripeModule,
+    S3Module,
   ],
-  controllers: [],
+  controllers: [SubscriptionController],
   providers: [
-    AppService, {
+    AppService,
+    {
       provide: 'APP_GUARD',
       useClass: WsJwtGuard,
-    }
+    },
   ],
 })
 export class AppModule { }

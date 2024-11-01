@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   validate,
   validateOrReject,
@@ -16,19 +17,17 @@ import {
 } from 'class-validator';
 
 export class UpdateUserDto {
+  @ApiProperty()
   @IsOptional()
   @IsString()
   username?: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsString()
   profilePictureUrl?: string;
 
-  @IsOptional()
-  @IsArray()
-  @IsInt({ each: true })
-  gameIds?: number[];
-
+  @ApiProperty()
   @IsOptional()
   bio?: string;
 }
