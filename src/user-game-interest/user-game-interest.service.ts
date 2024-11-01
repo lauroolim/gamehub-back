@@ -111,19 +111,6 @@ export class UserGameInterestService {
                                 }
                             }
                         }
-                    },
-                    addedBy: {
-                        select: {
-                            id: true,
-                            username: true,
-                            profilePictureUrl: true,
-                            Subscription: {
-                                select: {
-                                    type: true,
-                                    isActive: true,
-                                }
-                            },
-                        }
                     }
                 }
             });
@@ -133,13 +120,6 @@ export class UserGameInterestService {
             }
 
             const interestedUsers = gameWithUsers.GameUser.map(gu => gu.user);
-
-            if (gameWithUsers.addedBy && gameWithUsers.addedBy.Subscription?.type === 'GameDev') {
-                interestedUsers.push({
-                    ...gameWithUsers.addedBy,
-                    GameUser: []
-                });
-            }
 
             return {
                 gameId: gameWithUsers.id,
