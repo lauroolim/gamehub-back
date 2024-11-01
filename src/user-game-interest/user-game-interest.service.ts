@@ -57,7 +57,15 @@ export class UserGameInterestService {
                 username: userWithGames.username,
                 profilePictureUrl: userWithGames.profilePictureUrl,
                 games,
-                GameUser: userWithGames.GameUser,
+                GameUser: userWithGames.GameUser.map(gu => ({
+                    game: {
+                        id: gu.game.id,
+                        name: gu.game.name,
+                        description: gu.game.description,
+                        category: gu.game.category,
+                        gameimageUrl: gu.game.gameimageUrl,
+                    }
+                })),
             };
         } catch (error) {
             throw new Error(`Error finding user game interests: ${error.message}`);
@@ -86,7 +94,20 @@ export class UserGameInterestService {
                                             type: true,
                                             isActive: true,
                                         }
-                                    }
+                                    },
+                                    GameUser: {
+                                        select: {
+                                            game: {
+                                                select: {
+                                                    id: true,
+                                                    name: true,
+                                                    description: true,
+                                                    category: true,
+                                                    gameimageUrl: true,
+                                                }
+                                            }
+                                        }
+                                    },
                                 }
                             }
                         }
@@ -101,7 +122,7 @@ export class UserGameInterestService {
                                     type: true,
                                     isActive: true,
                                 }
-                            }
+                            },
                         }
                     }
                 }
@@ -114,7 +135,10 @@ export class UserGameInterestService {
             const interestedUsers = gameWithUsers.GameUser.map(gu => gu.user);
 
             if (gameWithUsers.addedBy && gameWithUsers.addedBy.Subscription?.type === 'GameDev') {
-                interestedUsers.push(gameWithUsers.addedBy);
+                interestedUsers.push({
+                    ...gameWithUsers.addedBy,
+                    GameUser: []
+                });
             }
 
             return {
