@@ -53,5 +53,4 @@ jobs:
             --allow-unauthenticated \
             --timeout 300 \
             --cpu 1 \
-            --set-env-vars="PORT=3000" \
-            --health-check-path="/"
+            --set-env-vars="PORT=3000"
