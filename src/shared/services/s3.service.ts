@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -29,5 +29,14 @@ export class S3Service {
         await this.s3Client.send(command);
 
         return `https://midias-app-gamehub.s3.amazonaws.com/${fileName}`;
+    }
+
+    async deleteFile(fileKey: string): Promise<void> {
+        const command = new DeleteObjectCommand({
+            Bucket: 'midias-app-gamehub',
+            Key: fileKey,
+        });
+
+        await this.s3Client.send(command);
     }
 }

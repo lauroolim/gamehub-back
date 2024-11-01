@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ConflictException } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { S3Service } from '../shared/services/s3.service';
@@ -9,6 +9,11 @@ export class UserService {
     private readonly prismaService: PrismaService,
     private readonly s3Service: S3Service,
   ) { }
+
+  private extractFileKeyFromUrl(url: string): string | null {
+    const matches = url.match(/amazonaws\.com\/(.*)/);
+    return matches ? matches[1] : null;
+  }
 
   async findAll() {
     return this.prismaService.user.findMany({
@@ -109,49 +114,21 @@ export class UserService {
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
-    const { gameIds, username, bio, profilePictureUrl } = updateUserDto;
-
-    const updateData: any = {};
-
-    if (username) updateData.username = username;
-    if (profilePictureUrl) updateData.profilePictureUrl = profilePictureUrl;
-    if (bio !== undefined) updateData.bio = bio;
-
-    if (gameIds) {
-      updateData.GameUser = {
-        connect: gameIds.map((gameId) => ({ gameId })),
-      };
-    }
-
     try {
-      return await this.prismaService.user.update({
+      const user = await this.prismaService.user.findUnique({
         where: { id },
-        data: updateData,
-        include: {
-          gamesAdded: true,
-          Subscription: true,
-
-        },
       });
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-  }
 
-  async updateProfile(userId: number, updateUserDto: UpdateUserDto, file?: Express.Multer.File) {
-    try {
-      let profilePictureUrl: string | null = null;
-
-      if (file) {
-        const fileName = `profile-${userId}-${Date.now()}-${file.originalname}`;
-        profilePictureUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
 
-      return await this.prismaService.user.update({
-        where: { id: userId },
+      const updatedUser = await this.prismaService.user.update({
+        where: { id },
         data: {
-          ...updateUserDto,
-          ...(profilePictureUrl && { profilePictureUrl }),
+          username: updateUserDto.username,
+          bio: updateUserDto.bio,
+          profilePictureUrl: updateUserDto.profilePictureUrl,
         },
         select: {
           id: true,
@@ -160,10 +137,61 @@ export class UserService {
           profilePictureUrl: true,
         },
       });
+
+      return updatedUser;
     } catch (error) {
-      throw new InternalServerErrorException('Error updating user');
+      if (error.code === 'P2002') {
+        throw new ConflictException('Username already exists');
+      }
+      throw new InternalServerErrorException(`Error updating user: ${error.message}`);
     }
   }
+
+  async updateProfile(userId: number, updateUserDto: UpdateUserDto, file?: Express.Multer.File) {
+    try {
+      const currentUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: { profilePictureUrl: true }
+      });
+
+      if (!currentUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      let newProfilePictureUrl = updateUserDto.profilePictureUrl;
+
+      if (file) {
+        if (currentUser.profilePictureUrl) {
+          const existingFileKey = this.extractFileKeyFromUrl(currentUser.profilePictureUrl);
+          if (existingFileKey) {
+            await this.s3Service.deleteFile(existingFileKey);
+          }
+        }
+
+        const fileName = `profile-${userId}-${Date.now()}-${file.originalname}`;
+        newProfilePictureUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+      }
+
+      const updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          ...updateUserDto,
+          profilePictureUrl: newProfilePictureUrl,
+        },
+        select: {
+          id: true,
+          username: true,
+          bio: true,
+          profilePictureUrl: true,
+        },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      throw new InternalServerErrorException(`Error updating profile: ${error.message}`);
+    }
+  }
+
 
   async remove(id: number) {
     try {
@@ -173,46 +201,5 @@ export class UserService {
     } catch (error) {
       throw new InternalServerErrorException('Error deleting user');
     }
-  }
-
-  async getUserProfile(userId: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: {
-        gamesAdded: true,
-        Subscription: true,
-        receivedFriendships: {
-          select: {
-            sender: {
-              select: { id: true, username: true, profilePictureUrl: true },
-            },
-          },
-        },
-        sentFriendships: {
-          select: {
-            receiver: {
-              select: { id: true, username: true, profilePictureUrl: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user) throw new NotFoundException('User not found');
-
-    return {
-      id: user.id,
-      username: user.username,
-      bio: user.bio,
-      profilePictureUrl: user.profilePictureUrl,
-      followers: user.followers,
-      following: user.following,
-      gamesAdded: user.gamesAdded,
-      subscriptionType: user.Subscription?.type,
-      subscriptionExpiresAt: user.Subscription?.expiresAt,
-      isGameDev: user.Subscription?.type === 'GameDev',
-      receivedFriendships: user.receivedFriendships,
-      sentFriendships: user.sentFriendships,
-    };
   }
 }

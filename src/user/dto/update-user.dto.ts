@@ -29,11 +29,5 @@ export class UpdateUserDto {
 
   @ApiProperty()
   @IsOptional()
-  @IsArray()
-  @IsInt({ each: true })
-  gameIds?: number[];
-
-  @ApiProperty()
-  @IsOptional()
   bio?: string;
 }
