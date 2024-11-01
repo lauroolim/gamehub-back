@@ -90,13 +90,11 @@ export class GamesService implements OnModuleInit {
                 addedBy: {
                     connect: { id: userId },
                 },
-            },
-        });
-
-        await this.prisma.gameUser.create({
-            data: {
-                userId: userId,
-                gameId: game.id,
+                GameUser: {
+                    create: {
+                        userId: userId,
+                    },
+                },
             },
         });
 
