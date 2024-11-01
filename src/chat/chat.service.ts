@@ -96,4 +96,3 @@ export class ChatService {
         return conversationsWithLastMessage;
     }
 }
-
