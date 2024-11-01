@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from './../shared/database/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { S3Service } from '../shared/services/s3.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) { }
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly s3Service: S3Service,
+  ) { }
 
   async findAll() {
     return this.prismaService.user.findMany({
@@ -126,10 +130,38 @@ export class UserService {
         include: {
           gamesAdded: true,
           Subscription: true,
+
         },
       });
     } catch (error) {
       throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async updateProfile(userId: number, updateUserDto: UpdateUserDto, file?: Express.Multer.File) {
+    try {
+      let profilePictureUrl: string | null = null;
+
+      if (file) {
+        const fileName = `profile-${userId}-${Date.now()}-${file.originalname}`;
+        profilePictureUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+      }
+
+      return await this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          ...updateUserDto,
+          ...(profilePictureUrl && { profilePictureUrl }),
+        },
+        select: {
+          id: true,
+          username: true,
+          bio: true,
+          profilePictureUrl: true,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error updating user');
     }
   }
 

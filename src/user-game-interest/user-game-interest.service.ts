@@ -5,7 +5,6 @@ import { PrismaService } from './../shared/database/prisma.service';
 export class UserGameInterestService {
     constructor(private prisma: PrismaService) { }
 
-
     async findUserGameInterestsByUserId(userId: number) {
         try {
             const userWithGames = await this.prisma.user.findUnique({
@@ -57,7 +56,8 @@ export class UserGameInterestService {
                 userId: userWithGames.id,
                 username: userWithGames.username,
                 profilePictureUrl: userWithGames.profilePictureUrl,
-                games
+                games,
+                GameUser: userWithGames.GameUser,
             };
         } catch (error) {
             throw new Error(`Error finding user game interests: ${error.message}`);
