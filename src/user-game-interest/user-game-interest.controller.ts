@@ -6,13 +6,13 @@ export class UserGameInterestController {
   constructor(private readonly userGameInterestService: UserGameInterestService) { }
 
   @Get('user/:userId')
-  async findUserGameInterestsByUserId(@Param('userId') userId: number) {
-    return this.userGameInterestService.findUserGameInterestsByUserId(userId);
+  findUserGameInterests(@Param('userId') userId: string) {
+    return this.userGameInterestService.findUserGameInterestsByUserId(+userId);
   }
 
   @Get('game/:gameId')
-  async findUserGameInterestsByGameId(@Param('gameId') gameId: number) {
-    return this.userGameInterestService.findUserGameInterestsByGameId(gameId);
+  findGameUserInterests(@Param('gameId') gameId: string) {
+    return this.userGameInterestService.findUserGameInterestsByGameId(+gameId);
   }
 
   @Get('similar-games/:userId')
@@ -21,7 +21,7 @@ export class UserGameInterestController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 15,
   ) {
-    return this.userGameInterestService.findSimilarGames(userId, page, limit);
+    return this.userGameInterestService.findSimilarUsers(userId, page, limit);
   }
 
 }

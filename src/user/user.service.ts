@@ -16,6 +16,19 @@ export class UserService {
         followers: true,
         following: true,
         gamesAdded: true,
+        GameUser: {
+          select: {
+            game: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                gameimageUrl: true,
+              },
+            },
+          },
+        },
         Subscription: {
           select: {
             type: true,
@@ -45,8 +58,16 @@ export class UserService {
           },
         },
         GameUser: {
-          include: {
-            game: true,
+          select: {
+            game: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                gameimageUrl: true,
+              },
+            },
           },
         },
         receivedFriendships: {
