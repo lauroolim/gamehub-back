@@ -1,4 +1,3 @@
-# Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -26,8 +25,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-ENV PORT=3000
-
-EXPOSE ${PORT}
+EXPOSE 3000
 
 CMD ["node", "dist/main.js"]
