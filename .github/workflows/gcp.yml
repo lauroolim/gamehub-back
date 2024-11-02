@@ -1,53 +1,19 @@
-name: CI/CD Workflow
+name: GCP
 
 on:
   push:
-    branches: ["main"]
-    tags: ['v*.*.*']
-  pull_request:
-    branches: ["main"]
-
-env:
-  REGISTRY: us-east1-docker.pkg.dev
-  IMAGE_NAME: ${{ secrets.PROJECT_ID }}/site-repo/gamehub
-  REGION: us-east1
-  SERVICE: gamehub
+    branches: [develop]
 
 jobs:
-  test:
-    name: Test
+  deploy:
+    name: Deploy to GCP
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-
-      - name: Install dependencies
-        run: |
-          npm install
-          npm install -g jest
-          npm install --save-dev jest-junit
-
-      - name: Run tests
-        run: jest --ci --reporters=default --reporters=jest-junit
-        
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: junit.xml
-          retention-days: 30
-
-  build-and-push:
-    needs: test
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+    environment: GameHub-GCP
+    env:
+      REGISTRY: us-west2-docker.pkg.dev
+      IMAGE_NAME: ${{ secrets.PROJECT_ID }}gamehub
+      REGION: us-east2
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,55 +24,31 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
 
-      - name: Configure Docker
+      - name: Auth Docker for Artifact Registry
         run: |
           gcloud auth configure-docker $REGISTRY --quiet
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,format=long
-            type=ref,event=branch
-            type=ref,event=tag
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    environment: GameHub-GCP
-    steps:
-      - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}
-          image: ${{ needs.build-and-push.outputs.image-tag }}
-          region: ${{ env.REGION }}
-          env_vars: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-
-  security:
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run ZAP Scan
-        uses: zaproxy/action-full-scan@v0.4.0
-        with:
-          target: ${{ needs.deploy.outputs.url }}
           
-      - name: Upload ZAP Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap-report/
-          retention-days: 30
+      - name: Build Image
+        run: |
+          docker build -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+          docker build -t $REGISTRY/$IMAGE_NAME:latest .
+
+      - name: Push Image
+        run: |
+          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $REGISTRY/$IMAGE_NAME:latest
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          gcloud run deploy gamehub \
+            --image $REGISTRY/$IMAGE_NAME:latest \
+            --region $REGION \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --platform managed \
+            --port 3000 \
+            --allow-unauthenticated \
+            --set-env-vars "$(node generate-env-vars.js)"

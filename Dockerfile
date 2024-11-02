@@ -1,53 +1,47 @@
-# Stage 1: Development
-FROM node:20-alpine as development
+FROM --platform=linux/amd64 node:20-alpine as development
 
 WORKDIR /usr/src/app
 
-# Copy package.json and install dependencies
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
+COPY prisma ./prisma/
+
 RUN npm ci
 
-# Copy Prisma schema and generate client
-COPY prisma ./prisma/
-RUN npx prisma generate --schema ./prisma/schema.prisma
+RUN npx prisma generate
 
-# Copy the rest of the application code
 COPY . .
 
-# Copy .env file for local development (optional)
-COPY .env .env
-
-# Stage 2: Build
-FROM node:20-alpine as build
+FROM --platform=linux/amd64 node:20-alpine as builder
 
 WORKDIR /usr/src/app
 
-# Copy dependencies and application code from the development stage
+RUN apk add --no-cache python3 make g++
+
 COPY --from=development /usr/src/app/node_modules ./node_modules
 COPY --from=development /usr/src/app/package*.json ./
 COPY --from=development /usr/src/app/prisma ./prisma
-COPY --from=development /usr/src/app/dist ./dist
+COPY . .
 
-# Build the application
 RUN npm run build
 
-# Stage 3: Production
-FROM node:20-alpine as production
+FROM --platform=linux/amd64 node:20-alpine as production
 
 WORKDIR /usr/src/app
 
-# Copy dependencies and built application from the build stage
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/package*.json ./
-COPY --from=build /usr/src/app/prisma ./prisma
-COPY --from=build /usr/src/app/dist ./dist
+RUN apk add --no-cache python3 make g++
 
-# Set environment variables (optional, for local development)
-# COPY --from=build /usr/src/app/.env .env
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/prisma ./prisma
 
-# Set the port and expose it
+ENV NODE_ENV=production
 ENV PORT=3000
+
+RUN npx prisma generate
+
 EXPOSE ${PORT}
 
-# Command to run the application
 CMD ["node", "dist/main.js"]
