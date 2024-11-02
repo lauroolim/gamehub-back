@@ -36,27 +36,38 @@ jobs:
 
   security:
     name: Security Scan
-    needs: test
+    needs: deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run OWASP ZAP Scan
-        uses: zaproxy/action-full-scan@v0.4.0
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          target: ${{ needs.deploy.outputs.app_url }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
+      - name: Run ZAP Scan
+        run: |
+          docker run --rm \
+            -v ${PWD}/zap-report:/zap/wrk:rw \
+            owasp/zap2docker-stable zap-baseline.py \
+            -t ${{ needs.deploy.outputs.app_url }} \
+            -r zap-report.html \
+            -I
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap-report/
+          retention-days: 30
   deploy:
     name: Deploy to GCP
-    needs: test
     runs-on: ubuntu-latest
     environment: GameHub-GCP
-    outputs:
-      app_url: ${{ steps.deploy.outputs.url }}
     env:
       IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/site:latest
       REGION: us-central1
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,15 +75,14 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
           project_id: ${{ secrets.PROJECT_ID }}
+          service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
+          install_components: 'gke-gcloud-auth-plugin'
+          export_default_credentials: true
 
-      - name: Configure Docker
+      - name: Configure Docker for GCR
         run: |
-          echo ${{ secrets.PROJECT_CREDENTIALS }} > service-account-key.json
-          gcloud auth activate-service-account --key-file service-account-key.json
-          gcloud config set project ${{ secrets.PROJECT_ID }}
-          gcloud auth configure-docker
+          gcloud auth configure-docker gcr.io --quiet
 
       - name: Build and Push Image
         run: |
@@ -82,7 +92,7 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          URL=$(gcloud run deploy site \
+          gcloud run deploy site \
             --image $IMAGE_NAME \
             --region $REGION \
             --memory 512Mi \
@@ -92,16 +102,4 @@ jobs:
             --platform managed \
             --port 3000 \
             --allow-unauthenticated \
-            --set-env-vars "$(node generate-env-vars.js)" \
-            --format='value(status.url)')
-          echo "url=$URL" >> $GITHUB_OUTPUT
-
-      - name: Save deployment URL
-        run: echo ${{ steps.deploy.outputs.url }} > environment_url.txt
-
-      - name: Upload deployment URL
-        uses: actions/upload-artifact@v4
-        with:
-          name: environment-url
-          path: environment_url.txt
-          retention-days: 30
+            --set-env-vars "$(node generate-env-vars.js)"
