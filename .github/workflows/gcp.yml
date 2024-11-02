@@ -10,6 +10,7 @@ env:
   SERVICE_NAME: gamehub-back
   LOCATION: us-central1       
   REPOSITORY: gamehub         
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -24,13 +25,25 @@ jobs:
         project_id: ${{ secrets.PROJECT_ID }}
         service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
 
+    - name: Enable APIs
+      run: |
+        gcloud services enable artifactregistry.googleapis.com
+        gcloud services enable run.googleapis.com
+
+    - name: Create Artifact Registry Repository
+      run: |
+        gcloud artifacts repositories create ${{ env.REPOSITORY }} \
+          --repository-format=docker \
+          --location=${{ env.LOCATION }} \
+          --description="Repository for GameHub" \
+          || true
+
     - name: Configure Docker authentication for Artifact Registry
       run: |
         gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev
 
     - name: Build and push Docker image
       run: |
-        # Construir o nome da imagem no formato correto para o Artifact Registry
         IMAGE_NAME="${LOCATION}-docker.pkg.dev${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
         echo "Building image: $IMAGE_NAME"
         docker build -t "$IMAGE_NAME" .
