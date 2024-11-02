@@ -7,12 +7,12 @@ on:
 
 env:
   REGION: us-central1          
-  SERVICE_NAME: gamehub-back  
+  SERVICE_NAME: gamehub-back
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -28,11 +28,14 @@ jobs:
         gcloud auth configure-docker gcr.io
 
     - name: Build and push Docker image
-      env:
-        IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
       run: |
-        docker build -t $IMAGE_NAME .
-        docker push $IMAGE_NAME
+        # Criar uma variável para a imagem com o PROJECT_ID corretamente interpolado
+        IMAGE_NAME="gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+        echo "Building image: $IMAGE_NAME"
+        docker build -t "$IMAGE_NAME" .
+        docker push "$IMAGE_NAME"
+        # Salvar o nome da imagem para usar no próximo step
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
     - name: Deploy to Cloud Run
       id: deploy
@@ -40,7 +43,7 @@ jobs:
       with:
         service: ${{ env.SERVICE_NAME }}
         region: ${{ env.REGION }}
-        image: gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+        image: ${{ env.IMAGE_NAME }}
 
     - name: Show Output
       run: echo ${{ steps.deploy.outputs.url }}
