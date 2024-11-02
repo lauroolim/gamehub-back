@@ -60,12 +60,13 @@ jobs:
           name: zap-report
           path: zap-report/
           retention-days: 30
+          
   deploy:
     name: Deploy to GCP
     runs-on: ubuntu-latest
     environment: GameHub-GCP
     env:
-      IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/site:latest
+      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.PROJECT_ID }}/site-repo/site:latest
       REGION: us-central1
     
     steps:
@@ -80,9 +81,9 @@ jobs:
           install_components: 'gke-gcloud-auth-plugin'
           export_default_credentials: true
 
-      - name: Configure Docker for GCR
+      - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker gcr.io --quiet
+          gcloud auth configure-docker us-docker.pkg.dev --quiet
 
       - name: Build and Push Image
         run: |
