@@ -31,7 +31,7 @@ jobs:
     - name: Build and push Docker image
       run: |
         # Construir o nome da imagem no formato correto para o Artifact Registry
-        IMAGE_NAME="${LOCATION}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
+        IMAGE_NAME="${LOCATION}-docker.pkg.dev${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
         echo "Building image: $IMAGE_NAME"
         docker build -t "$IMAGE_NAME" .
         docker push "$IMAGE_NAME"
