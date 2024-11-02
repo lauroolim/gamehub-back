@@ -6,9 +6,8 @@ on:
       - develop
 
 env:
-  PROJECT_ID: secrets.PROJECT_ID    
   REGION: us-central1          
-  SERVICE_NAME: gamehub-back
+  SERVICE_NAME: gamehub-back  
 
 jobs:
   build-and-deploy:
@@ -21,7 +20,7 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
-        project_id: ${{ env.PROJECT_ID }}
+        project_id: ${{ secrets.PROJECT_ID }}
         service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
 
     - name: Configure Docker authentication
@@ -30,7 +29,7 @@ jobs:
 
     - name: Build and push Docker image
       env:
-        IMAGE_NAME: gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}
+        IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
       run: |
         docker build -t $IMAGE_NAME .
         docker push $IMAGE_NAME
@@ -41,8 +40,7 @@ jobs:
       with:
         service: ${{ env.SERVICE_NAME }}
         region: ${{ env.REGION }}
-        image: gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
-        flags: --allow-unauthenticated
+        image: gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
 
     - name: Show Output
       run: echo ${{ steps.deploy.outputs.url }}
