@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
 
@@ -28,10 +28,11 @@ jobs:
         
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: junit.xml
+          retention-days: 30
 
   security:
     name: Security Scan
@@ -39,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Run OWASP ZAP Scan
         uses: zaproxy/action-full-scan@v0.4.0
@@ -58,10 +59,10 @@ jobs:
       REGION: us-central1
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0.2.0
+        uses: google-github-actions/setup-gcloud@v2
         with:
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
           project_id: ${{ secrets.PROJECT_ID }}
@@ -99,7 +100,8 @@ jobs:
         run: echo ${{ steps.deploy.outputs.url }} > environment_url.txt
 
       - name: Upload deployment URL
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: environment-url
           path: environment_url.txt
+          retention-days: 30
