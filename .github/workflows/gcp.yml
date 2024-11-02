@@ -1,17 +1,8 @@
-name: CI/CD Workflow
+name: GCP
 
 on:
   push:
-    branches: ["main"]
-    tags: ['v*.*.*']
-  pull_request:
-    branches: ["main"]
-
-env:
-  REGISTRY: us-east1-docker.pkg.dev
-  IMAGE_NAME: ${{ secrets.PROJECT_ID }}/site-repo/gamehub
-  REGION: us-east1
-  SERVICE: gamehub
+    branches: [develop]
 
 jobs:
   test:
@@ -43,11 +34,37 @@ jobs:
           path: junit.xml
           retention-days: 30
 
-  build-and-push:
-    needs: test
+  security:
+    name: Security Scan
+    needs: deploy
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Run ZAP Scan
+        run: |
+          docker run --rm -v ${PWD}/zap-report:/zap/wrk:rw owasp/zap2docker-stable zap-baseline.py -t ${{ needs.deploy.outputs.app_url }} -r zap-report.html -I
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap-report/
+          retention-days: 30
+          
+  deploy:
+    name: Deploy to GCP
+    runs-on: ubuntu-latest
+    environment: GameHub-GCP
+    env:
+      REGISTRY: us-east1-docker.pkg.dev
+      IMAGE_NAME: ${{ secrets.PROJECT_ID }}/site-repo/gamehub
+      REGION: us-east1
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,55 +75,23 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
 
-      - name: Configure Docker
+      - name: Auth Docker for Artifact Registry
         run: |
           gcloud auth configure-docker $REGISTRY --quiet
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,format=long
-            type=ref,event=branch
-            type=ref,event=tag
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    environment: GameHub-GCP
-    steps:
-      - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}
-          image: ${{ needs.build-and-push.outputs.image-tag }}
-          region: ${{ env.REGION }}
-          env_vars: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-
-  security:
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run ZAP Scan
-        uses: zaproxy/action-full-scan@v0.4.0
-        with:
-          target: ${{ needs.deploy.outputs.url }}
           
-      - name: Upload ZAP Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap-report/
-          retention-days: 30
+      - name: Build Image
+        run: |
+          docker build -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+          docker build -t $REGISTRY/$IMAGE_NAME:latest .
+
+      - name: Push Image
+        run: |
+          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $REGISTRY/$IMAGE_NAME:latest
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          gcloud run deploy gamehub 
+
+ 
