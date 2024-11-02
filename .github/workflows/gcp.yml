@@ -67,7 +67,7 @@ jobs:
     environment: GameHub-GCP
     env:
       IMAGE_NAME: us-docker.pkg.dev/${{ secrets.PROJECT_ID }}/site-repo/site:latest
-      REGION: us-central1
+      REGION: us-east1
     
     steps:
       - name: Checkout
@@ -93,7 +93,7 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          gcloud run deploy site \
+          gcloud run deploy gamehub \
             --image $IMAGE_NAME \
             --region $REGION \
             --memory 512Mi \
