@@ -1,33 +1,39 @@
-# Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine as development
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
 RUN npx prisma generate
+
+FROM node:20-alpine as build
+
+WORKDIR /usr/src/app
+
+COPY --from=development /usr/src/app/node_modules ./node_modules
+COPY --from=development /usr/src/app/package*.json ./
+COPY --from=development /usr/src/app/prisma ./prisma
+COPY . .
+
 RUN npm run build
+RUN npm ci --only=production
+RUN npx prisma generate
 
-FROM node:20-alpine
+FROM node:20-alpine as production
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-COPY package*.json ./
-COPY prisma ./prisma/
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+COPY --from=build /usr/src/app/prisma ./prisma
+COPY --from=build /usr/src/app/package*.json ./
 
-RUN npm install --only=production
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-
-ENV PORT=3000
-
+ENV PORT=8080
 EXPOSE ${PORT}
 
 CMD ["node", "dist/main.js"]

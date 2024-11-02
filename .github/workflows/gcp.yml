@@ -5,12 +5,9 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
-    name: Build, Test, and Deploy to GCP
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    environment: GameHub-GCP
-    env:
-      IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/site:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -21,24 +18,88 @@ jobs:
           node-version: '20.x'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install -g jest
+          npm install --save-dev jest-junit
 
-      - name: Run unit tests
-        run: npm run test
+      - name: Run tests
+        run: jest --ci --reporters=default --reporters=jest-junit
+        
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: junit.xml
 
-      - uses: google-github-actions/setup-gcloud@v0.2.0
+  security:
+    name: Security Scan
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run OWASP ZAP Scan
+        uses: zaproxy/action-full-scan@v0.4.0
+        with:
+          target: ${{ needs.deploy.outputs.app_url }}
+
+  deploy:
+    name: Deploy to GCP
+    needs: test
+    runs-on: ubuntu-latest
+    environment: GameHub-GCP
+    outputs:
+      app_url: ${{ steps.deploy.outputs.url }}
+    env:
+      IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/site:latest
+      REGION: us-central1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.2.0
         with:
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
           project_id: ${{ secrets.PROJECT_ID }}
 
       - name: Configure Docker
-        run: gcloud auth configure-docker --quiet
+        run: |
+          echo ${{ secrets.PROJECT_CREDENTIALS }} > service-account-key.json
+          gcloud auth activate-service-account --key-file service-account-key.json
+          gcloud config set project ${{ secrets.PROJECT_ID }}
+          gcloud auth configure-docker
 
-      - name: Build Docker image
-        run: docker build -t $IMAGE_NAME .
+      - name: Build and Push Image
+        run: |
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
 
-      - name: Push Docker image
-        run: docker push $IMAGE_NAME
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          URL=$(gcloud run deploy site \
+            --image $IMAGE_NAME \
+            --region $REGION \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --platform managed \
+            --port 3000 \
+            --allow-unauthenticated \
+            --set-env-vars "$(node generate-env-vars.js)" \
+            --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
 
-      - name: Deploy Docker image
-        run: gcloud run deploy site --image $IMAGE_NAME --region us-central1 --memory 128Mi --min-instances 0 --max-instances 1 --platform managed --port 80 --allow-unauthenticated
+      - name: Save deployment URL
+        run: echo ${{ steps.deploy.outputs.url }} > environment_url.txt
+
+      - name: Upload deployment URL
+        uses: actions/upload-artifact@v2
+        with:
+          name: environment-url
+          path: environment_url.txt
