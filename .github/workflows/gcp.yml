@@ -8,7 +8,7 @@ on:
 env:
   PROJECT_ID: secrets.PROJECT_ID    
   REGION: us-central1          
-  SERVICE_NAME: git-actions 
+  SERVICE_NAME: gamehub-back
 
 jobs:
   build-and-deploy:
