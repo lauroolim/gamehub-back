@@ -47,12 +47,7 @@ jobs:
 
       - name: Run ZAP Scan
         run: |
-          docker run --rm \
-            -v ${PWD}/zap-report:/zap/wrk:rw \
-            owasp/zap2docker-stable zap-baseline.py \
-            -t ${{ needs.deploy.outputs.app_url }} \
-            -r zap-report.html \
-            -I
+          docker run --rm -v ${PWD}/zap-report:/zap/wrk:rw owasp/zap2docker-stable zap-baseline.py -t ${{ needs.deploy.outputs.app_url }} -r zap-report.html -I
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
@@ -66,7 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: GameHub-GCP
     env:
-      IMAGE_NAME: us-docker.pkg.dev/${{ secrets.PROJECT_ID }}/site-repo/site:latest
+      REGISTRY: us-east1-docker.pkg.dev
+      IMAGE_NAME: ${{ secrets.PROJECT_ID }}/site-repo/gamehub
       REGION: us-east1
     
     steps:
@@ -78,29 +74,24 @@ jobs:
         with:
           project_id: ${{ secrets.PROJECT_ID }}
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
-          install_components: 'gke-gcloud-auth-plugin'
-          export_default_credentials: true
 
-      - name: Configure Docker for Artifact Registry
+      - name: Auth Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker us-docker.pkg.dev --quiet
+          gcloud auth configure-docker $REGISTRY --quiet
+          
+      - name: Build Image
+        run: |
+          docker build -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+          docker build -t $REGISTRY/$IMAGE_NAME:latest .
 
-      - name: Build and Push Image
+      - name: Push Image
         run: |
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
+          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $REGISTRY/$IMAGE_NAME:latest
 
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          gcloud run deploy gamehub \
-            --image $IMAGE_NAME \
-            --region $REGION \
-            --memory 512Mi \
-            --cpu 1 \
-            --min-instances 0 \
-            --max-instances 10 \
-            --platform managed \
-            --port 3000 \
-            --allow-unauthenticated \
-            --set-env-vars "$(node generate-env-vars.js)"
+          gcloud run deploy gamehub --image $REGISTRY/$IMAGE_NAME:latest --region $REGION --memory 512Mi --cpu 1 --min-instances 0 --max-instances 10 --platform managed --port 3000 --allow-unauthenticated --set-env-vars "$(node generate-env-vars.js)"
+
+ 
