@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: GameHub-GCP
     env:
-      REGISTRY: us-east1-docker.pkg.dev
-      IMAGE_NAME: ${{ secrets.PROJECT_ID }}/site-repo/gamehub
-      REGION: us-east1
+      REGISTRY: us-west2-docker.pkg.dev
+      IMAGE_NAME: ${{ secrets.PROJECT_ID }}gamehub
+      REGION: us-east2
     
     steps:
       - name: Checkout

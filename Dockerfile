@@ -1,4 +1,4 @@
-FROM node:20-alpine as development
+FROM --platform=linux/amd64 node:20-alpine as development
 
 WORKDIR /usr/src/app
 
@@ -13,7 +13,7 @@ RUN npx prisma generate
 
 COPY . .
 
-FROM node:20-alpine as builder
+FROM --platform=linux/amd64 node:20-alpine as builder
 
 WORKDIR /usr/src/app
 
@@ -26,7 +26,7 @@ COPY . .
 
 RUN npm run build
 
-FROM node:20-alpine as production
+FROM --platform=linux/amd64 node:20-alpine as production
 
 WORKDIR /usr/src/app
 
