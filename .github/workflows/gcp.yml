@@ -1,67 +1,33 @@
-name: Build and Deploy to Cloud Run
+name: GCP
 
 on:
   push:
-    branches:
-      - develop
-
-env:
-  REGION: us-central1          
-  SERVICE_NAME: gamehub-back
-  LOCATION: us-central1       
-  REPOSITORY: gamehub         
+    branches: [develop]
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Setup Gcloud Account
     runs-on: ubuntu-latest
-    
+    environment: GameHub-GCP
+    env:
+      IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/site:latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        project_id: ${{ secrets.PROJECT_ID }}
-        service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
+      - uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Set Project ID
-      run: |
-        gcloud config set project ${{ secrets.PROJECT_ID }}
+      - name: Configure Docker
+        run: gcloud auth configure-docker --quiet
 
-    - name: Enable APIs
-      run: |
-        gcloud services enable artifactregistry.googleapis.com --project=${{ secrets.PROJECT_ID }}
-        gcloud services enable run.googleapis.com --project=${{ secrets.PROJECT_ID }}
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME .
 
-    - name: Create Artifact Registry Repository
-      run: |
-        gcloud artifacts repositories create ${{ env.REPOSITORY }} \
-          --project=${{ secrets.PROJECT_ID }} \
-          --repository-format=docker \
-          --location=${{ env.LOCATION }} \
-          --description="Repository for GameHub" \
-          || true
+      - name: Push Docker image
+        run: docker push $IMAGE_NAME
 
-    - name: Configure Docker authentication for Artifact Registry
-      run: |
-        gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev
-
-    - name: Build and push Docker image
-      run: |
-        IMAGE_NAME="${LOCATION}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
-        echo "Building image: $IMAGE_NAME"
-        docker build -t "$IMAGE_NAME" .
-        docker push "$IMAGE_NAME"
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-
-    - name: Deploy to Cloud Run
-      id: deploy
-      uses: google-github-actions/deploy-cloudrun@v2
-      with:
-        service: ${{ env.SERVICE_NAME }}
-        region: ${{ env.REGION }}
-        image: ${{ env.IMAGE_NAME }}
-
-    - name: Show Output
-      run: echo ${{ steps.deploy.outputs.url }}
+      - name: Deploy Docker image
+        run: gcloud run deploy site --image $IMAGE_NAME --region us-central1 --memory 128Mi --min-instances 0 --max-instances 1 --platform managed --port 80 --allow-unauthenticated
