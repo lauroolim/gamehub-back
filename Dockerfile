@@ -33,7 +33,7 @@ COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/prisma ./prisma
 COPY --from=build /usr/src/app/package*.json ./
 
-ENV PORT=8080
+ENV PORT=3000
 EXPOSE ${PORT}
 
 CMD ["node", "dist/main.js"]
