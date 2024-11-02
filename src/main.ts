@@ -8,6 +8,7 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
 
+
     const config = new DocumentBuilder()
       .setTitle('GameHub API')
       .setDescription('GameHub API Documentation')
@@ -31,8 +32,8 @@ async function bootstrap() {
 
     app.getHttpAdapter().get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
-    const port = process.env.PORT || 3000;
-    await app.listen(port, '0.0.0.0');
+    const port = parseInt(process.env.PORT, 10) || 3000;
+    await app.listen(parseInt(process.env.PORT, 10) || 3000)
     console.log(`Application is running on port ${port}`);
 
     const signals = ['SIGTERM', 'SIGINT'];
