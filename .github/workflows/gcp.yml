@@ -25,14 +25,19 @@ jobs:
         project_id: ${{ secrets.PROJECT_ID }}
         service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
 
+    - name: Set Project ID
+      run: |
+        gcloud config set project ${{ secrets.PROJECT_ID }}
+
     - name: Enable APIs
       run: |
-        gcloud services enable artifactregistry.googleapis.com
-        gcloud services enable run.googleapis.com
+        gcloud services enable artifactregistry.googleapis.com --project=${{ secrets.PROJECT_ID }}
+        gcloud services enable run.googleapis.com --project=${{ secrets.PROJECT_ID }}
 
     - name: Create Artifact Registry Repository
       run: |
         gcloud artifacts repositories create ${{ env.REPOSITORY }} \
+          --project=${{ secrets.PROJECT_ID }} \
           --repository-format=docker \
           --location=${{ env.LOCATION }} \
           --description="Repository for GameHub" \
@@ -44,7 +49,7 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        IMAGE_NAME="${LOCATION}-docker.pkg.dev${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
+        IMAGE_NAME="${LOCATION}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}"
         echo "Building image: $IMAGE_NAME"
         docker build -t "$IMAGE_NAME" .
         docker push "$IMAGE_NAME"
