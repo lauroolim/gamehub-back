@@ -39,4 +39,4 @@ jobs:
 
       - name: Deploy Docker image
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} --project ${{ secrets.PROJECT_ID }} --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 128Mi --min-instances 0 --max-instances 1 --platform managed --port 3000 --allow-unauthenticated --no-cpu-throttling --timeout=600s
+          gcloud run deploy ${{ env.SERVICE_NAME }} --project ${{ secrets.PROJECT_ID }} --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 512Mi --min-instances 0 --max-instances 1 --platform managed --port 3000 --allow-unauthenticated --no-cpu-throttling --timeout=600s
