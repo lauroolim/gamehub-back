@@ -27,14 +27,18 @@ jobs:
       run: |
         gcloud auth configure-docker gcr.io
 
+    - name: Debug Project ID
+      run: |
+        echo "Project ID is: ${{ secrets.PROJECT_ID }}"
+        # Criar variável PROJECT_ID para usar nos próximos steps
+        echo "PROJECT_ID=${{ secrets.PROJECT_ID }}" >> $GITHUB_ENV
+
     - name: Build and push Docker image
       run: |
-        # Criar uma variável para a imagem com o PROJECT_ID corretamente interpolado
-        IMAGE_NAME="gcr.io/${{ secrets.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+        IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${GITHUB_SHA}"
         echo "Building image: $IMAGE_NAME"
         docker build -t "$IMAGE_NAME" .
         docker push "$IMAGE_NAME"
-        # Salvar o nome da imagem para usar no próximo step
         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
     - name: Deploy to Cloud Run
