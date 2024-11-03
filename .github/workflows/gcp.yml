@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: GameHub-GCP
     env:
-      IMAGE_NAME: us-central1-docker.pkg.dev/${{ secrets.PROJECT_ID }}/cloud-run-source-deploy/site:latest
+      IMAGE_NAME: us-central1-docker.pkg.dev/gamehub-gcp/cloud-run-source-deploy/site:latest
       REGION: us-central1
       SERVICE_NAME: site
 
@@ -22,11 +22,11 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0.2.0
         with:
           service_account_key: ${{ secrets.PROJECT_CREDENTIALS }}
-          project_id: ${{ secrets.PROJECT_ID }}
+          project_id: gamehub-gcp
           export_default_credentials: true
 
       - name: Set project ID
-        run: gcloud config set project ${{ secrets.PROJECT_ID }}
+        run: gcloud config set project gamehub-gcp
 
       - name: Configure Docker
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
@@ -39,4 +39,4 @@ jobs:
 
       - name: Deploy Docker image
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} --project ${{ secrets.PROJECT_ID }} --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 512Mi --min-instances 0 --max-instances 1 --platform managed --port 3000 --allow-unauthenticated --no-cpu-throttling --timeout=600s
+          gcloud run deploy ${{ env.SERVICE_NAME }} --project gamehub-gcp --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 512Mi --min-instances 0 --max-instances 1 --platform managed --port 3000 --allow-unauthenticated --no-cpu-throttling --timeout=600s
