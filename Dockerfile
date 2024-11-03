@@ -38,7 +38,7 @@ COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/prisma ./prisma
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
 RUN npx prisma generate
 
