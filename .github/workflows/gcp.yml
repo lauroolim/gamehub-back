@@ -39,4 +39,4 @@ jobs:
 
       - name: Deploy Docker image
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} --project gamehub-gcp --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 512Mi --min-instances 0 --max-instances 1 --platform managed --port 8080 --allow-unauthenticated --no-cpu-throttling --timeout=600s
+          gcloud run deploy ${{ env.SERVICE_NAME }} --project gamehub-gcp --image ${{ env.IMAGE_NAME }} --region ${{ env.REGION }} --memory 512Mi --min-instances 0 --max-instances 1 --platform managed --port 8080 --allow-unauthenticated --no-cpu-throttling --timeout=600s --set-env-vars PORT=8080 --startup-probe-path=/health --startup-probe-initial-delay=15 --startup-probe-period=5

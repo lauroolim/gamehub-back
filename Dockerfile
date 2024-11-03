@@ -42,6 +42,6 @@ ENV PORT=8080
 
 RUN npx prisma generate
 
-EXPOSE ${PORT}
+EXPOSE 8080
 
 CMD ["node", "dist/main.js"]
