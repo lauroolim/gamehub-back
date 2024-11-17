@@ -1,14 +1,18 @@
-import { Controller, Post, Req, Res, HttpException, HttpStatus } from '@nestjs/common';
-import { WebhookStrategyManager } from './webhook-strategy.manager';
+import { Controller, Post, Req, Res, Param, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { WebhookStrategyManager } from './webhook-strategy.manager';
 
 @Controller('webhook')
 export class WebhookController {
     constructor(private readonly strategyManager: WebhookStrategyManager) { }
 
     @Post(':provider')
-    async handleWebhook(@Req() req: Request, @Res() res: Response) {
-        const { provider } = req.params;
+    @UseGuards()
+    async handleWebhook(
+        @Param('provider') provider: string,
+        @Req() req: Request,
+        @Res() res: Response,
+    ) {
         const sig = req.headers['x-signature'] || req.headers['stripe-signature'];
         const payload = req.body;
 
@@ -18,8 +22,8 @@ export class WebhookController {
             await strategy.handleEvent(event);
             res.json({ received: true });
         } catch (error) {
-            console.error(`Webhook error: ${error.message}`);
-            res.status(500).send(`Webhook handler error: ${error.message}`);
+            console.error(error);
+            throw new HttpException('Webhook handling failed', HttpStatus.BAD_REQUEST);
         }
     }
 }
