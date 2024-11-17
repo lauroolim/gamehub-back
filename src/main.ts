@@ -18,7 +18,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
 
-    app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+    app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
     app.enableCors();
     app.setGlobalPrefix('/api');
     app.useGlobalPipes(new ValidationPipe({

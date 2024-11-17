@@ -16,6 +16,8 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { StripeModule } from './stripe/stripe.module';
 import { SubscriptionController } from './subscription/subscription.controller';
 import { S3Module } from './shared/services/s3.module';
+import { DonationModule } from './donation/donation.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { S3Module } from './shared/services/s3.module';
     SubscriptionModule,
     StripeModule,
     S3Module,
+    DonationModule,
+    WebhookModule
   ],
   controllers: [SubscriptionController],
   providers: [
