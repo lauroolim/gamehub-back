@@ -3,9 +3,15 @@ import { WebhookController } from './webhook.controller';
 import { WebhookStrategyManager } from './webhook-strategy.manager';
 import { StripeWebhookService } from './strategies/stripe-webhook.service';
 import { MercadoPagoWebhookService } from './strategies/mercado-pago-webhook.service';
+import { SubscriptionModule } from '../subscription/subscription.module';
+import { PrismaModule } from '../shared/database/prisma.module';
 
 @Module({
     controllers: [WebhookController],
+    imports: [
+        SubscriptionModule,
+        PrismaModule
+    ],
     providers: [
         WebhookStrategyManager,
         StripeWebhookService,
