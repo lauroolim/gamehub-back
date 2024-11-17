@@ -69,17 +69,23 @@ export class PostService {
     });
 
     if (existingLike) {
-      return this.prisma.like.delete({
-        where: { postId_userId: { postId, userId } },
-      });
+      return { message: 'You have already liked this post.' };
     }
 
-    return this.prisma.like.create({
+    await this.prisma.like.create({
+      data: { postId, userId },
+    });
+
+    await this.prisma.post.update({
+      where: { id: postId },
       data: {
-        postId,
-        userId,
+        likesCount: {
+          increment: 1,
+        },
       },
     });
+
+    return { message: 'Post liked successfully.' };
   }
 
 

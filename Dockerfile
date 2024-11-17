@@ -38,10 +38,10 @@ COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/prisma ./prisma
 
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=3000
 
 RUN npx prisma generate
 
-EXPOSE 8080
+EXPOSE 3000
 
 CMD ["node", "dist/main.js"]
