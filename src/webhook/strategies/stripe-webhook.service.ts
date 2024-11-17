@@ -42,14 +42,58 @@ export class StripeWebhookService implements WebhookHandler {
     }
 
     private async handleCheckoutSessionCompleted(event: Stripe.Event) {
+        const session = event.data.object as Stripe.Checkout.Session;
 
+        const userIdString = session.metadata['userId'];
+        const userId = parseInt(userIdString, 10);
+
+        const subscriptionId = session.subscription as string;
+        const customerId = session.customer as string;
+
+        if (!userId) {
+            console.error('userId não encontrado no metadata da sessão.');
+            return;
+        }
+
+        await this.subscriptionService.createSubscription(userId, subscriptionId, customerId);
     }
 
     private async handlePaymentSucceeded(event: Stripe.Event) {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerEmail = invoice.customer_email;
 
+        if (!customerEmail) return;
+
+        const user = await this.prisma.user.findUnique({
+            where: { email: customerEmail },
+        });
+
+        if (user) {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+
+            await this.prisma.subscription.updateMany({
+                where: { userId: user.id },
+                data: { isActive: true, expiresAt },
+            });
+        }
     }
 
     private async handlePaymentFailed(event: Stripe.Event) {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerEmail = invoice.customer_email;
 
+        if (!customerEmail) return;
+
+        const user = await this.prisma.user.findUnique({
+            where: { email: customerEmail },
+        });
+
+        if (user) {
+            await this.prisma.subscription.updateMany({
+                where: { userId: user.id },
+                data: { isActive: false },
+            });
+        }
     }
 }
