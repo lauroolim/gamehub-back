@@ -17,7 +17,7 @@ export class StripeController {
     try {
       event = this.stripeService.constructEventFromWebhook(payload, sig);
     } catch (err) {
-      console.error(`Erro ao verificar assinatura: ${err.message}`);
+      console.error(`⚠️  Erro ao verificar assinatura: ${err.message}`);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
