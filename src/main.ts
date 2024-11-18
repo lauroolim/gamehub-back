@@ -19,7 +19,6 @@ async function bootstrap() {
     SwaggerModule.setup('api', app, document);
 
     app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
-    app.use('/api/mercadopago/webhook', express.raw({ type: 'application/json' }));
     app.enableCors();
     app.setGlobalPrefix('/api');
     app.useGlobalPipes(new ValidationPipe({
