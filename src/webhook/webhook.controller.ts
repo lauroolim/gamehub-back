@@ -51,7 +51,8 @@ export class WebhookController {
     ): string | undefined {
         const signatureMap: Record<WebhookProvider, string> = {
             [WebhookProvider.STRIPE]: 'stripe-signature',
-            // Outros providers...
+            [WebhookProvider.MERCADO_PAGO]: 'x-signature',
+            //providers sao aq
         };
 
         const headerKey = signatureMap[provider]?.toLowerCase();

@@ -22,5 +22,6 @@ import { ConfigService } from '@nestjs/config';
         SubscriptionService,
         ConfigService,
     ],
+    exports: [StripeWebhookService],
 })
 export class WebhookModule { }

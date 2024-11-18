@@ -95,7 +95,7 @@ export class StripeWebhookService implements WebhookHandler<Stripe.Event> {
 
     private async handleSubscriptionCreated(subscription: Stripe.Subscription): Promise<void> {
 
-        console.log('Subscription created:', subscription.id);
+
     }
 
     private async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {

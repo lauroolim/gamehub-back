@@ -1,6 +1,6 @@
 export enum WebhookProvider {
     STRIPE = 'stripe',
-
+    MERCADO_PAGO = 'mercado-pago',
 }
 
 export interface WebhookResponse {
