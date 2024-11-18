@@ -1,17 +1,25 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import Stripe from 'stripe';
-import { UserService } from '../user/user.service';
+import { ConfigService } from '@nestjs/config';
+import { User } from './types/user.types';
 
 @Injectable()
 export class SubscriptionService {
-    private stripe: Stripe;
+    private readonly stripe: Stripe;
+    private readonly logger = new Logger(SubscriptionService.name);
 
     constructor(
-        private prisma: PrismaService,
+        private readonly prisma: PrismaService,
+        private readonly configService: ConfigService,
     ) {
-        this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-09-30.acacia' });
+        const stripeKey = this.configService.getOrThrow<string>('STRIPE_SECRET_KEY');
+        this.stripe = new Stripe(stripeKey, {
+            apiVersion: '2024-09-30.acacia'
+        });
     }
+    receivedFriendships: any[] = [];
+    sentFriendships: any[] = [];
 
     async createCheckoutSession(
         userId: number,
@@ -19,124 +27,168 @@ export class SubscriptionService {
         successUrl: string,
         cancelUrl: string,
     ) {
-        const priceId = this.getPriceIdByType(type);
-
-        if (!priceId) {
-            throw new BadRequestException('Invalid subscription type.');
-        }
-
         try {
+            const user = await this.validateUserForSubscription(userId);
+
+            const priceId = this.getPriceIdByType(type);
+            if (!priceId) {
+                throw new BadRequestException('Invalid subscription type.');
+            }
+
+            const metadata = {
+                userId: userId.toString(),
+                subscriptionType: type,
+                username: user.username,
+                gameCategories: user.GameUser.map(gu => gu.game.category).join(',')
+            };
+
             const session = await this.stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [
                     {
                         price: priceId,
-                        quantity: 1,
+                        quantity: 1
                     },
                 ],
                 mode: 'subscription',
-                success_url: successUrl,
-                cancel_url: cancelUrl,
-                metadata: { userId: userId.toString() },
+                success_url: this.sanitizeUrl(successUrl),
+                cancel_url: this.sanitizeUrl(cancelUrl),
+                metadata,
+                customer_email: user.email,
+                allow_promotion_codes: true,
+                billing_address_collection: 'required',
+                currency: 'brl',
+                locale: 'pt-BR',
+                payment_method_collection: 'always',
+                expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+                custom_text: {
+                    submit: {
+                        message: 'Ao assinar, você concorda com nossos termos de serviço'
+                    },
+                }
             });
 
-            return session;
+            return {
+                id: session.id,
+                url: session.url,
+                amount_total: session.amount_total,
+                currency: session.currency,
+                expires_at: session.expires_at,
+                metadata: session.metadata,
+                payment_status: session.payment_status,
+                status: session.status,
+                mode: session.mode
+            };
         } catch (error) {
-            throw new BadRequestException(error.message);
-        }
-    }
-
-    private getPriceIdByType(type: string): string | null {
-        switch (type) {
-            case 'GameDev':
-                return process.env.STRIPE_PRICE_GAMEDEV;
-            case 'GameDev Basic':
-                return process.env.STRIPE_PRICE_GAMEDEV_BASIC;
-            default:
-                return null;
-        }
-    }
-
-    private getTypeByPriceId(priceId: string): string | null {
-        if (priceId === process.env.STRIPE_PRICE_GAMEDEV) {
-            return 'GameDev';
-        } else if (priceId === process.env.STRIPE_PRICE_GAMEDEV_BASIC) {
-            return 'GameDev Basic';
-        }
-        return null;
-    }
-
-    async createSubscription(
-        userId: number,
-        stripeSubscriptionId: string,
-        stripeCustomerId: string,
-    ) {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-        if (!user) throw new BadRequestException('Usuário não encontrado.');
-
-        const stripeSubscription = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
-        const type = this.getTypeByPriceId(stripeSubscription.items.data[0].price.id);
-
-        if (!type) throw new BadRequestException('Tipo de assinatura inválido.');
-
-        const priceAmount = stripeSubscription.items.data[0].price.unit_amount / 100;
-
-        return this.prisma.subscription.create({
-            data: {
+            this.logger.error('Failed to create checkout session', {
                 userId,
                 type,
-                price: priceAmount,
-                isActive: true,
-                stripeId: stripeSubscriptionId,
-                stripeCustomerId: stripeCustomerId,
-                expiresAt: this.getExpiryDate(),
-            },
-        });
+                error: error.message,
+                stack: error.stack
+            });
+            throw new BadRequestException(
+                error.message || 'Failed to create checkout session'
+            );
+        };
     }
 
-    async updateSubscription(userId: number, newType: string) {
-        const subscription = await this.prisma.subscription.findUnique({ where: { userId } });
-        if (!subscription) throw new BadRequestException('Assinatura não encontrada.');
-
-        const newPriceId = this.getPriceIdByType(newType);
-        if (!newPriceId) throw new BadRequestException('Tipo de assinatura inválido.');
-
-        await this.prisma.planChange.create({
-            data: {
-                subscriptionId: subscription.id,
-                oldPlan: subscription.type,
-                newPlan: newType,
-            },
+    private async validateUserForSubscription(userId: number): Promise<User> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                Subscription: true,
+                GameUser: {
+                    include: {
+                        game: true
+                    },
+                }
+            }
         });
 
-        return this.prisma.subscription.update({
-            where: { userId },
-            data: { type: newType },
-        });
+        if (!user) {
+            throw new BadRequestException('User not found');
+        }
+
+        if (user.Subscription?.isActive) {
+            throw new BadRequestException('User already has an active subscription');
+        }
+
+        if (user.GameUser.length === 0) {
+            throw new BadRequestException('User must have at least one game preference');
+        }
+
+        return {
+            ...user,
+            receivedFriendships: this.receivedFriendships,
+            sentFriendships: this.sentFriendships
+        };
     }
 
-    async getSubscription(userId: number) {
-        return this.prisma.subscription.findUnique({ where: { userId } });
+    async createSubscription(userId: number, subscriptionId: string, customerId: string): Promise<void> {
+        try {
+            const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+
+            const expiresAt = new Date(subscription.current_period_end * 1000);
+            const type = subscription.metadata.subscriptionType;
+
+            const price = subscription.items.data[0].plan?.amount ?? 0 / 100;
+
+            await this.prisma.subscription.create({
+                data: {
+                    userId: userId,
+                    type: type,
+                    expiresAt: expiresAt,
+                    price: price,
+                    stripeId: subscription.id,
+                    stripeCustomerId: customerId,
+                }
+            });
+
+            this.logger.debug('Created subscription', {
+                userId,
+                subscriptionId,
+                type,
+                expiresAt,
+                price,
+                stripeId: subscription.id,
+                stripeCustomerId: customerId,
+            });
+        } catch (error) {
+            this.logger.error('Error creating subscription', { error });
+        }
     }
 
-    async cancelSubscription(userId: number) {
-        return this.prisma.subscription.update({
-            where: { userId },
-            data: { isActive: false },
-        });
+
+    private getPriceIdByType(type: string): string | null {
+        const priceMap = {
+            'GameDev': this.configService.get('STRIPE_PRICE_GAMEDEV'),
+            'GameDev Basic': this.configService.get('STRIPE_PRICE_GAMEDEV_BASIC'),
+        };
+
+        const price = priceMap[type];
+        if (!price) {
+            this.logger.warn(`Invalid subscription type requested: ${type}`);
+            return null;
+        }
+
+        return price;
     }
 
-    async renewSubscription(userId: number) {
-        const newExpiryDate = this.getExpiryDate();
+    private sanitizeUrl(url: string): string {
+        const allowedDomains = [
+            'myapp.com',
+            'localhost',
+            'checkout.stripe.com'
+        ];
 
-        return this.prisma.subscription.update({
-            where: { userId },
-            data: { isActive: true, expiresAt: newExpiryDate },
-        });
-    }
-
-    private getExpiryDate(): Date {
-        return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        try {
+            const parsedUrl = new URL(url);
+            if (!allowedDomains.some(domain => parsedUrl.hostname.includes(domain))) {
+                throw new BadRequestException('Invalid redirect URL domain');
+            }
+            return url;
+        } catch (error) {
+            throw new BadRequestException('Invalid URL format');
+        }
     }
 }

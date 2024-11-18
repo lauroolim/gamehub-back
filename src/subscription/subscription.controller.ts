@@ -16,7 +16,16 @@ export class SubscriptionController {
     return this.subscriptionService.createCheckoutSession(userId, type, successUrl, cancelUrl);
   }
 
-  @Patch(':userId')
+  @Post(':userId/create-subscription')
+  async createSubscription(
+    @Param('userId') userId: number,
+    @Body('subscriptionId') subscriptionId: string,
+    @Body('customerId') customerId: string,
+  ) {
+    await this.subscriptionService.createSubscription(userId, subscriptionId, customerId);
+  }
+
+  /*@Patch(':userId')
   async updateSubscription(
     @Param('userId') userId: number,
     @Body('newType') newType: 'GameDev' | 'GameDev Basic',
@@ -37,5 +46,5 @@ export class SubscriptionController {
   @Post(':userId/renew')
   async renewSubscription(@Param('userId') userId: number) {
     return this.subscriptionService.renewSubscription(userId);
-  }
+  }*/
 }

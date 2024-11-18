@@ -1,4 +1,4 @@
-export interface WebhookHandler {
-    validateSignature(payload: Buffer, signature: string): any;
-    handleEvent(event: any): Promise<void>;
+export interface WebhookHandler<T = unknown> {
+    validateSignature(payload: Buffer | string, signature: string): Promise<T>;
+    handleEvent(event: T): Promise<void>;
 }

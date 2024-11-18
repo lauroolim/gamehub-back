@@ -5,6 +5,9 @@ import { StripeWebhookService } from './strategies/stripe-webhook.service';
 import { MercadoPagoWebhookService } from './strategies/mercado-pago-webhook.service';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { PrismaModule } from '../shared/database/prisma.module';
+import { PrismaService } from '../shared/database/prisma.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
     controllers: [WebhookController],
@@ -15,16 +18,9 @@ import { PrismaModule } from '../shared/database/prisma.module';
     providers: [
         WebhookStrategyManager,
         StripeWebhookService,
-        MercadoPagoWebhookService,
+        PrismaService,
+        SubscriptionService,
+        ConfigService,
     ],
 })
-export class WebhookModule {
-    constructor(
-        private readonly strategyManager: WebhookStrategyManager,
-        private readonly stripeService: StripeWebhookService,
-        private readonly mercadoPagoService: MercadoPagoWebhookService,
-    ) {
-        this.strategyManager.registerStrategy('stripe', stripeService);
-        this.strategyManager.registerStrategy('mercadopago', mercadoPagoService);
-    }
-}
+export class WebhookModule { }
