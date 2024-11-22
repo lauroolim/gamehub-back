@@ -23,6 +23,16 @@ export class GamesController {
     return this.gamesService.addGame(userId, createGameDto, file);
   }
 
+  @Post(':id')
+  @UseInterceptors(FileInterceptor('file'))
+  async updateGames(
+    @Param('id') id: number,
+    @Body() createGameDto: CreateGameDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.gamesService.updateGames(id, createGameDto, file);
+  }
+
   @Get('user/:userId')
   async getGamesByUser(@Param('userId') userId: number) {
     return this.gamesService.getGamesByUser(userId);

@@ -32,7 +32,8 @@ model User {
   likes               Like[]
   Comment             Comment[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
+  Donation  Donation[]
 }
 
 model Subscription {
@@ -50,6 +51,28 @@ model Subscription {
   stripeCustomerId     String   @default("")
 
   planChanges PlanChange[]
+}
+
+model Donation {
+  id            Int      @id @default(autoincrement())
+  amount        Float
+  description   String
+  payerEmail    String
+  gameId        Int
+  userId        Int
+  token         String   @unique
+  platformFee   Float
+  gameDevAmount Float
+  createdAt     DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Benefit {
+  id          Int    @id @default(autoincrement())
+  threshold   Float
+  description String
 }
 
 model PlanChange {
@@ -70,8 +93,10 @@ model Game {
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
 
-  addedBy User? @relation("AddedGames", fields: [userId], references: [id])
-  userId  Int?
+  addedBy  User?      @relation("AddedGames", fields: [userId], references: [id])
+  userId   Int?
+  Donation Donation[]
+  posts    Post[]
 }
 
 model GameUser {
@@ -114,6 +139,8 @@ model Post {
   imageUrl   String?
   authorId   Int
   author     User      @relation(fields: [authorId], references: [id])
+  gameId     Int?
+  game       Game?     @relation(fields: [gameId], references: [id])
   createdAt  DateTime  @default(now())
   views      View[]
   likes      Like[]

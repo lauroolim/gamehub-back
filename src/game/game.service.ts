@@ -124,4 +124,25 @@ export class GamesService implements OnModuleInit {
             },
         });
     }
+
+    async updateGames(id: number, createGameDto: CreateGameDto, file?: Express.Multer.File) {
+        let imageUrl: string | null = null;
+
+        if (file) {
+            const fileName = `${Date.now()}-${file.originalname}`;
+            imageUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+        } else if (createGameDto.gameimageUrl) {
+            imageUrl = createGameDto.gameimageUrl;
+        }
+
+        return this.prisma.game.update({
+            where: { id },
+            data: {
+                name: createGameDto.name,
+                description: createGameDto.description,
+                gameimageUrl: imageUrl,
+                category: createGameDto.category,
+            },
+        });
+    }
 }
