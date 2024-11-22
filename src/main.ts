@@ -18,7 +18,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
 
-    app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
+    app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
     app.enableCors();
     app.setGlobalPrefix('/api');
     app.useGlobalPipes(new ValidationPipe({
@@ -33,7 +33,7 @@ async function bootstrap() {
     app.getHttpAdapter().get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
     const port = parseInt(process.env.PORT, 10) || 3000;
-    await app.listen(port, '0.0.0.0');
+    await app.listen(parseInt(process.env.PORT, 10) || 3000)
     console.log(`Application is running on port ${port}`);
 
     const signals = ['SIGTERM', 'SIGINT'];
