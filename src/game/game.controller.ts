@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, UploadedFile, UseInterceptors, Req, Put } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GamesService } from './game.service';
 import { CreateGameDto } from './dto/create-game.dto';
@@ -23,7 +23,7 @@ export class GamesController {
     return this.gamesService.addGame(userId, createGameDto, file);
   }
 
-  @Post(':id')
+  @Put(':id')
   @UseInterceptors(FileInterceptor('file'))
   async updateGames(
     @Param('id') id: number,
@@ -36,6 +36,12 @@ export class GamesController {
   @Get('user/:userId')
   async getGamesByUser(@Param('userId') userId: number) {
     return this.gamesService.getGamesByUser(userId);
+  }
+
+
+  @Get('not-in-profile/:userId')
+  async getGamesNotInUserProfile(@Param('userId') userId: string) {
+    return this.gamesService.getGamesNotInUserProfile(+userId);
   }
 }
 

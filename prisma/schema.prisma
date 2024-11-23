@@ -33,7 +33,7 @@ model User {
   Comment             Comment[]
 
   createdAt DateTime   @default(now())
-  Donation  Donation[]
+  donations Donation[]
 }
 
 model Subscription {
@@ -69,9 +69,14 @@ model Donation {
 }
 
 model Benefit {
-  id          Int    @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
+  gameId      Int
   threshold   Float
   description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id])
 }
 
 model PlanChange {
@@ -96,6 +101,7 @@ model Game {
   userId   Int?
   Donation Donation[]
   posts    Post[]
+  benefits Benefit[]
 }
 
 model GameUser {

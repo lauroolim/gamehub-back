@@ -3,6 +3,8 @@ import { CreateDonationDto } from './dto/create-donation.dto';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { PrismaService } from '../shared/database/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
+import { CreateBenefitDto } from './dto/create-benefit.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class DonationService {
@@ -94,6 +96,68 @@ export class DonationService {
     });
   }
 
+  async setBenefit(gameId: number, createBenefitDto: CreateBenefitDto) {
+    const { threshold, description } = createBenefitDto;
+
+    return await this.prisma.benefit.create({
+      data: {
+        gameId,
+        threshold,
+        description,
+      },
+    });
+  }
+
+  async getBenefits(gameId: number) {
+    return this.prisma.benefit.findMany({
+      where: { gameId },
+      orderBy: { threshold: 'asc' },
+    });
+  }
+
+  async getTotalDonationsByGameAuthor(gameId: number): Promise<number> {
+    const game = await this.prisma.game.findUnique({
+      where: { id: gameId },
+      select: { userId: true },
+    });
+
+    if (!game || !game.userId) {
+      throw new NotFoundException('Jogo ou autor não encontrado.');
+    }
+
+    const authorId = game.userId;
+
+    const gamesByAuthor = await this.prisma.game.findMany({
+      where: { userId: authorId },
+      select: { id: true },
+    });
+
+    const gameIds = gamesByAuthor.map((g) => g.id);
+
+    const result = await this.prisma.donation.aggregate({
+      where: {
+        gameId: { in: gameIds },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return result._sum.amount || 0;
+  }
+
+  async getUserTotalDonations(gameId: number, userId: number): Promise<number> {
+    const result = await this.prisma.donation.aggregate({
+      where: {
+        gameId,
+        userId,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+    return result._sum.amount || 0;
+  }
 
   async validateGameDevCode(gameId: number, token: string) {
     const donation = await this.prisma.donation.findFirst({

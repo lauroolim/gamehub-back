@@ -145,4 +145,20 @@ export class GamesService implements OnModuleInit {
             },
         });
     }
+
+    async getGamesNotInUserProfile(userId: number) {
+        const userGames = await this.prisma.gameUser.findMany({
+            where: { userId },
+            select: { gameId: true },
+        });
+        const gameIds = userGames.map((gameUser) => gameUser.gameId);
+
+        return this.prisma.game.findMany({
+            where: {
+                id: {
+                    notIn: gameIds.length > 0 ? gameIds : [0],
+                },
+            },
+        });
+    }
 }
