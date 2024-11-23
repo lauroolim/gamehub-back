@@ -1,12 +1,13 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, UploadedFile, UseInterceptors, Req, Put } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GamesService } from './game.service';
 import { CreateGameDto } from './dto/create-game.dto';
+import { UpdateGameDto } from './dto/update-game.dto';
 import { Request } from 'express';
 
 @Controller('games')
 export class GamesController {
-  constructor(private readonly gamesService: GamesService) { }
+  constructor(private readonly gamesService: GamesService) {}
 
   @Get()
   findAll() {
@@ -23,14 +24,14 @@ export class GamesController {
     return this.gamesService.addGame(userId, createGameDto, file);
   }
 
-  @Post(':id')
+  @Put('update/:id')
   @UseInterceptors(FileInterceptor('file'))
-  async updateGames(
+  async updateGame(
     @Param('id') id: number,
-    @Body() createGameDto: CreateGameDto,
+    @Body() updateGameDto: UpdateGameDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.gamesService.updateGames(id, createGameDto, file);
+    return this.gamesService.updateGame(id, updateGameDto, file);
   }
 
   @Get('user/:userId')
@@ -38,4 +39,3 @@ export class GamesController {
     return this.gamesService.getGamesByUser(userId);
   }
 }
-

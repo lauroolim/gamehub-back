@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { CreateGameDto } from './dto/create-game.dto';
+import { UpdateGameDto } from './dto/update-game.dto';
 import { S3Service } from '../shared/services/s3.service';
 import { Express } from 'express';
 
@@ -125,24 +126,24 @@ export class GamesService implements OnModuleInit {
         });
     }
 
-    async updateGames(id: number, createGameDto: CreateGameDto, file?: Express.Multer.File) {
+    async updateGame(id: number, updateGameDto: UpdateGameDto, file?: Express.Multer.File) {
         let imageUrl: string | null = null;
-
+    
         if (file) {
-            const fileName = `${Date.now()}-${file.originalname}`;
-            imageUrl = await this.s3Service.uploadFile(fileName, file.buffer);
-        } else if (createGameDto.gameimageUrl) {
-            imageUrl = createGameDto.gameimageUrl;
+          const fileName = `${Date.now()}-${file.originalname}`;
+          imageUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+        } else if (updateGameDto.gameimageUrl) {
+          imageUrl = updateGameDto.gameimageUrl;
         }
-
+    
+        const dataToUpdate: Partial<UpdateGameDto> = {
+          ...updateGameDto,
+          ...(imageUrl && { gameimageUrl: imageUrl }),
+        };
+    
         return this.prisma.game.update({
-            where: { id },
-            data: {
-                name: createGameDto.name,
-                description: createGameDto.description,
-                gameimageUrl: imageUrl,
-                category: createGameDto.category,
-            },
+          where: { id },
+          data: dataToUpdate,
         });
-    }
+      }
 }
