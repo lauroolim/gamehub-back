@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { PrismaService } from '../shared/database/prisma.service';
@@ -23,8 +23,44 @@ export class DonationService {
     const donationId = uuidv4();
     const { amount, description, payerEmail, gameId, userId } = createDonationDto;
 
-    const platformFee = (this.platformFeePercentage / 100) * amount;
-    const gameDevAmount = amount - platformFee;
+
+    const game = await this.prisma.game.findUnique({
+      where: { id: gameId },
+      include: {
+        users: true,
+      },
+    });
+
+    if (!game) {
+      throw new NotFoundException('Jogo não encontrado.');
+    }
+
+    const gameDeveloper = game.users;
+
+    if (!gameDeveloper.mercadoPagoAccountId) {
+      throw new BadRequestException('O autor do jogo não possui uma conta no Mercado Pago.');
+    }
+
+    const preferenceData = {
+      items: [
+        {
+          id: donationId,
+          title: description,
+          description: description,
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: amount,
+        },
+      ],
+      payer: {
+        email: payerEmail,
+      },
+      marketplace_fee: (this.platformFeePercentage / 100) * amount,
+      purpose: 'wallet_purchase',
+      collector_id: gameDeveloper.mercadoPagoAccountId,
+    };
+
+    const preference = await this.mercadoPago.preferences.create(preferenceData);
 
     const donation = await this.prisma.donation.create({
       data: {
@@ -34,43 +70,12 @@ export class DonationService {
         gameId,
         userId,
         token: donationId,
-        platformFee,
-        gameDevAmount,
+        platformFee: (this.platformFeePercentage / 100) * amount,
+        gameDevAmount: amount - (this.platformFeePercentage / 100) * amount,
       },
     });
 
-    const body = {
-      items: [
-        {
-          id: donation.id.toString(),
-          title: 'Doação',
-          description,
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: amount,
-        },
-      ],
-      back_urls: {
-        success: 'http://localhost:3000/success',
-        failure: 'http://localhost:3000/failure',
-        pending: 'http://localhost:3000/pending',
-      },
-      auto_return: 'all',
-      payment_method_id: 'pix',
-      payer: {
-        email: payerEmail,
-      },
-    };
-
-    try {
-      const response = await this.preference.create({ body });
-      return {
-        preferenceId: response.id,
-        token: donation.token,
-      };
-    } catch (error) {
-      throw error;
-    }
+    return { preferenceId: preference.body.id, initPoint: preference.body.init_point };
   }
 
   async validateDonationToken(token: string) {
