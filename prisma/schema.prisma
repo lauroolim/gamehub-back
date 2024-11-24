@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id                Int     @id @default(autoincrement())
-  username          String  @unique
-  email             String  @unique
-  password          String
-  profilePictureUrl String?
-  bio               String?
-  stamp             Boolean @default(false)
+  id                   Int     @id @default(autoincrement())
+  username             String  @unique
+  email                String  @unique
+  password             String
+  profilePictureUrl    String?
+  bio                  String?
+  stamp                Boolean @default(false)
+  mercadoPagoAccountId String?
 
   gamesAdded Game[] @relation("AddedGames")
   followers  Int    @default(0)

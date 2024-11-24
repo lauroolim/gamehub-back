@@ -35,9 +35,9 @@ export class DonationService {
       throw new NotFoundException('Jogo não encontrado.');
     }
 
-    const gameDeveloper = game.users;
+    const gameDeveloper = game.users[0];
 
-    if (!gameDeveloper.mercadoPagoAccountId) {
+    if (!gameDeveloper || !gameDeveloper.mercadoPagoAccountId) {
       throw new BadRequestException('O autor do jogo não possui uma conta no Mercado Pago.');
     }
 
@@ -60,7 +60,7 @@ export class DonationService {
       collector_id: gameDeveloper.mercadoPagoAccountId,
     };
 
-    const preference = await this.mercadoPago.preferences.create(preferenceData);
+    const preference = await this.preference.create({ body: preferenceData });
 
     const donation = await this.prisma.donation.create({
       data: {
@@ -75,7 +75,7 @@ export class DonationService {
       },
     });
 
-    return { preferenceId: preference.body.id, initPoint: preference.body.init_point };
+    return { preferenceId: preference.id, initPoint: preference.init_point };
   }
 
   async validateDonationToken(token: string) {
