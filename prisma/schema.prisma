@@ -117,6 +117,7 @@ model Game {
   description  String?
   category     String?
   gameimageUrl String?
+  isStatic     Boolean    @default(false)
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
 

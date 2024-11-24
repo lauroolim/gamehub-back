@@ -12,6 +12,11 @@ export class FriendshipController {
     return this.friendshipService.followUser(followerId, followingId);
   }
 
+  @Post('follow/game')
+  async followGame(@Body() body: { followerId: number; followingId: number }) {
+    const { followerId, followingId } = body;
+    return this.friendshipService.followGame(followerId, followingId);
+  }
 
   @Get('following/:userId')
   async getFollowing(@Param('userId') userId: number) {

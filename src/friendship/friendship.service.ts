@@ -39,6 +39,39 @@ export class FriendshipService {
     return friendship;
   }
 
+  async followGame(followerId: number, followingId: number) {
+    const follower = await this.prisma.user.findUnique({ where: { id: followerId } });
+    const following = await this.prisma.game.findUnique({ where: { id: followingId } });
+
+    if (!follower) {
+      throw new NotFoundException(`User with ID ${followerId} not found`);
+    }
+
+    if (!following) {
+      throw new NotFoundException(`User with ID ${followingId} not found`);
+    }
+
+    const friendship = await this.prisma.friendship.create({
+      data: {
+        senderId: followerId,
+        receiverId: followingId,
+        status: 'following',
+      },
+    });
+
+    await this.prisma.user.update({
+      where: { id: followerId },
+      data: { following: { increment: 1 } },
+    });
+
+    await this.prisma.user.update({
+      where: { id: followingId },
+      data: { followers: { increment: 1 } },
+    });
+
+    return friendship;
+  }
+
   async listFollowing(userId: number) {
     return this.prisma.friendship.findMany({
       where: { senderId: userId, status: 'following' },
