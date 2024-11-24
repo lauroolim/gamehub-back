@@ -1,53 +1,47 @@
-FROM --platform=linux/amd64 node:20-alpine AS development
+FROM --platform=linux/amd64 node:20-alpine as development
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache python3 make g++ && \
-    addgroup -S appgroup && \
-    adduser -S appuser -G appgroup
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci && \
-    npx prisma generate
+RUN npm ci
+
+RUN npx prisma generate
 
 COPY . .
 
-FROM --platform=linux/amd64 node:20-alpine AS build
+FROM --platform=linux/amd64 node:20-alpine as builder
 
 WORKDIR /usr/src/app
 
-COPY --from=development /usr/src/app ./
+RUN apk add --no-cache python3 make g++
+
+COPY --from=development /usr/src/app/node_modules ./node_modules
+COPY --from=development /usr/src/app/package*.json ./
+COPY --from=development /usr/src/app/prisma ./prisma
+COPY . .
 
 RUN npm run build
 
-FROM --platform=linux/amd64 node:20-alpine AS production
+FROM --platform=linux/amd64 node:20-alpine as production
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache python3 make g++ && \
-    addgroup -S appgroup && \
-    adduser -S appuser -G appgroup
+RUN apk add --no-cache python3 make g++
 
-COPY --from=development /usr/src/app/package*.json ./
-RUN npm ci --only=production && \
-    npm cache clean --force
-
-COPY --from=build /usr/src/app/dist ./dist
-COPY --from=development /usr/src/app/prisma ./prisma
-
-RUN npx prisma generate && \
-    chown -R appuser:appgroup /usr/src/app
-
-USER appuser
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/prisma ./prisma
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+RUN npx prisma generate
 
-EXPOSE 3000
+EXPOSE ${PORT}
 
 CMD ["node", "dist/main.js"]
