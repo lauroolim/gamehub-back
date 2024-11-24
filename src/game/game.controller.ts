@@ -7,7 +7,7 @@ import { Request } from 'express';
 
 @Controller('games')
 export class GamesController {
-  constructor(private readonly gamesService: GamesService) {}
+  constructor(private readonly gamesService: GamesService) { }
 
   @Get()
   findAll() {
@@ -24,7 +24,7 @@ export class GamesController {
     return this.gamesService.addGame(userId, createGameDto, file);
   }
 
-  @Put('update/:id')
+  @Put(':id')
   @UseInterceptors(FileInterceptor('file'))
   async updateGame(
     @Param('id') id: number,
@@ -38,4 +38,11 @@ export class GamesController {
   async getGamesByUser(@Param('userId') userId: number) {
     return this.gamesService.getGamesByUser(userId);
   }
+
+
+  @Get('not-in-profile/:userId')
+  async getGamesNotInUserProfile(@Param('userId') userId: string) {
+    return this.gamesService.getGamesNotInUserProfile(+userId);
+  }
 }
+

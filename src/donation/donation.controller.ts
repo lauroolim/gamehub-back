@@ -10,4 +10,25 @@ export class DonationController {
   async create(@Body() createDonationDto: CreateDonationDto) {
     return this.donationService.createDonation(createDonationDto);
   }
+
+  @Get('user/:userId/game/:gameId/total-donations')
+  async getUserTotalDonations(
+    @Param('gameId') gameId: string,
+    @Param('userId') userId: string,
+  ) {
+    const total = await this.donationService.getUserTotalDonations(+gameId, +userId);
+    return { totalDonated: total };
+  }
+
+  @Get('benefits/:gameId')
+  async getBenefits(@Param('gameId') gameId: number) {
+    return this.donationService.getBenefits(Number(gameId));
+  }
+
+  @Get('game/:gameId/author/total-donations')
+  async getTotalDonationsByGameAuthor(@Param('gameId') gameId: string) {
+    const total = await this.donationService.getTotalDonationsByGameAuthor(+gameId);
+    return { totalDonated: total };
+  }
+
 }

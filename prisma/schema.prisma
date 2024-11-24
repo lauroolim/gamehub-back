@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id                Int     @id @default(autoincrement())
-  username          String  @unique
-  email             String  @unique
-  password          String
-  profilePictureUrl String?
-  bio               String?
-  stamp             Boolean @default(false)
+  id                   Int     @id @default(autoincrement())
+  username             String  @unique
+  email                String  @unique
+  password             String
+  profilePictureUrl    String?
+  bio                  String?
+  stamp                Boolean @default(false)
+  mercadoPagoAccountId String?
 
   gamesAdded Game[] @relation("AddedGames")
   followers  Int    @default(0)
@@ -33,7 +34,7 @@ model User {
   Comment             Comment[]
 
   createdAt DateTime   @default(now())
-  Donation  Donation[]
+  donations Donation[]
 }
 
 model Subscription {
@@ -70,9 +71,14 @@ model Donation {
 }
 
 model Benefit {
-  id          Int    @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
+  gameId      Int
   threshold   Float
   description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id])
 }
 
 model PlanChange {
@@ -97,6 +103,7 @@ model Game {
   userId   Int?
   Donation Donation[]
   posts    Post[]
+  benefits Benefit[]
 }
 
 model GameUser {

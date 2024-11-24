@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { PrismaService } from '../shared/database/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
+import { CreateBenefitDto } from './dto/create-benefit.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class DonationService {
@@ -21,8 +23,44 @@ export class DonationService {
     const donationId = uuidv4();
     const { amount, description, payerEmail, gameId, userId } = createDonationDto;
 
-    const platformFee = (this.platformFeePercentage / 100) * amount;
-    const gameDevAmount = amount - platformFee;
+
+    const game = await this.prisma.game.findUnique({
+      where: { id: gameId },
+      include: {
+        users: true,
+      },
+    });
+
+    if (!game) {
+      throw new NotFoundException('Jogo não encontrado.');
+    }
+
+    const gameDeveloper = game.users[0];
+
+    if (!gameDeveloper || !gameDeveloper.mercadoPagoAccountId) {
+      throw new BadRequestException('O autor do jogo não possui uma conta no Mercado Pago.');
+    }
+
+    const preferenceData = {
+      items: [
+        {
+          id: donationId,
+          title: description,
+          description: description,
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: amount,
+        },
+      ],
+      payer: {
+        email: payerEmail,
+      },
+      marketplace_fee: (this.platformFeePercentage / 100) * amount,
+      purpose: 'wallet_purchase',
+      collector_id: gameDeveloper.mercadoPagoAccountId,
+    };
+
+    const preference = await this.preference.create({ body: preferenceData });
 
     const donation = await this.prisma.donation.create({
       data: {
@@ -32,43 +70,12 @@ export class DonationService {
         gameId,
         userId,
         token: donationId,
-        platformFee,
-        gameDevAmount,
+        platformFee: (this.platformFeePercentage / 100) * amount,
+        gameDevAmount: amount - (this.platformFeePercentage / 100) * amount,
       },
     });
 
-    const body = {
-      items: [
-        {
-          id: donation.id.toString(),
-          title: 'Doação',
-          description,
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: amount,
-        },
-      ],
-      back_urls: {
-        success: 'http://localhost:3000/success',
-        failure: 'http://localhost:3000/failure',
-        pending: 'http://localhost:3000/pending',
-      },
-      auto_return: 'all',
-      payment_method_id: 'pix',
-      payer: {
-        email: payerEmail,
-      },
-    };
-
-    try {
-      const response = await this.preference.create({ body });
-      return {
-        preferenceId: response.id,
-        token: donation.token,
-      };
-    } catch (error) {
-      throw error;
-    }
+    return { preferenceId: preference.id, initPoint: preference.init_point };
   }
 
   async validateDonationToken(token: string) {
@@ -94,6 +101,68 @@ export class DonationService {
     });
   }
 
+  async setBenefit(gameId: number, createBenefitDto: CreateBenefitDto) {
+    const { threshold, description } = createBenefitDto;
+
+    return await this.prisma.benefit.create({
+      data: {
+        gameId,
+        threshold,
+        description,
+      },
+    });
+  }
+
+  async getBenefits(gameId: number) {
+    return this.prisma.benefit.findMany({
+      where: { gameId },
+      orderBy: { threshold: 'asc' },
+    });
+  }
+
+  async getTotalDonationsByGameAuthor(gameId: number): Promise<number> {
+    const game = await this.prisma.game.findUnique({
+      where: { id: gameId },
+      select: { userId: true },
+    });
+
+    if (!game || !game.userId) {
+      throw new NotFoundException('Jogo ou autor não encontrado.');
+    }
+
+    const authorId = game.userId;
+
+    const gamesByAuthor = await this.prisma.game.findMany({
+      where: { userId: authorId },
+      select: { id: true },
+    });
+
+    const gameIds = gamesByAuthor.map((g) => g.id);
+
+    const result = await this.prisma.donation.aggregate({
+      where: {
+        gameId: { in: gameIds },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return result._sum.amount || 0;
+  }
+
+  async getUserTotalDonations(gameId: number, userId: number): Promise<number> {
+    const result = await this.prisma.donation.aggregate({
+      where: {
+        gameId,
+        userId,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+    return result._sum.amount || 0;
+  }
 
   async validateGameDevCode(gameId: number, token: string) {
     const donation = await this.prisma.donation.findFirst({

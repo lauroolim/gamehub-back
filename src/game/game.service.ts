@@ -128,22 +128,38 @@ export class GamesService implements OnModuleInit {
 
     async updateGame(id: number, updateGameDto: UpdateGameDto, file?: Express.Multer.File) {
         let imageUrl: string | null = null;
-    
+
         if (file) {
-          const fileName = `${Date.now()}-${file.originalname}`;
-          imageUrl = await this.s3Service.uploadFile(fileName, file.buffer);
+            const fileName = `${Date.now()}-${file.originalname}`;
+            imageUrl = await this.s3Service.uploadFile(fileName, file.buffer);
         } else if (updateGameDto.gameimageUrl) {
-          imageUrl = updateGameDto.gameimageUrl;
+            imageUrl = updateGameDto.gameimageUrl;
         }
-    
+
         const dataToUpdate: Partial<UpdateGameDto> = {
-          ...updateGameDto,
-          ...(imageUrl && { gameimageUrl: imageUrl }),
+            ...updateGameDto,
+            ...(imageUrl && { gameimageUrl: imageUrl }),
         };
-    
+
         return this.prisma.game.update({
-          where: { id },
-          data: dataToUpdate,
+            where: { id },
+            data: dataToUpdate,
         });
-      }
+    }
+
+    async getGamesNotInUserProfile(userId: number) {
+        const userGames = await this.prisma.gameUser.findMany({
+            where: { userId },
+            select: { gameId: true },
+        });
+        const gameIds = userGames.map((gameUser) => gameUser.gameId);
+
+        return this.prisma.game.findMany({
+            where: {
+                id: {
+                    notIn: gameIds.length > 0 ? gameIds : [0],
+                },
+            },
+        });
+    }
 }
