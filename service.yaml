@@ -4,10 +4,6 @@ metadata:
   name: gamehub-back
 spec:
   template:
-    metadata:
-      annotations:
-        autoscaling.knative.dev/minScale: "1"
-        autoscaling.knative.dev/maxScale: "10"
     spec:
       containers:
         - image: gcr.io/gamehub-gcp/gamehub:latest
@@ -16,10 +12,3 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
-          resources:
-            requests:
-              cpu: "500m"
-              memory: "512Mi"
-            limits:
-              cpu: "1000m"
-              memory: "1024Mi"
