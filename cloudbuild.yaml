@@ -1,7 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  script: |
-    docker build -t us-west2-docker.pkg.dev/gamehub-gcp/gamehub/quickstart-image:tag1 .
-  automapSubstitutions: true
-images:
-- 'us-west2-docker.pkg.dev/gamehub-gcp/gamehub/quickstart-image:tag1'
