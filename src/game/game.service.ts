@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, OnModuleInit } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { CreateGameDto } from './dto/create-game.dto';
@@ -138,6 +138,66 @@ export class GamesService implements OnModuleInit {
         });
     }
 
+
+    async getGameProfile(gameId: number): Promise<any> {
+        const game = await this.prisma.game.findUnique({
+            where: { id: gameId },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                gameimageUrl: true,
+                category: true,
+                addedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true,
+                    },
+                },
+            },
+        });
+
+        if (!game) {
+            throw new NotFoundException('Game not found');
+        }
+
+        const followersCount = await this.prisma.gameFollower.count({
+            where: { gameId },
+        });
+
+        const postsCount = await this.prisma.post.count({
+            where: { gameId },
+        });
+
+        const recentPosts = await this.prisma.post.findMany({
+            where: { gameId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: {
+                id: true,
+                content: true,
+                imageUrl: true,
+                createdAt: true,
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true,
+                    },
+                },
+            },
+        });
+
+        return {
+            ...game,
+            followersCount,
+            postsCount,
+            recentPosts,
+        };
+    }
+
+
     async updateGame(id: number, updateGameDto: UpdateGameDto, file?: Express.Multer.File) {
         let imageUrl: string | null = null;
 
@@ -156,6 +216,36 @@ export class GamesService implements OnModuleInit {
         return this.prisma.game.update({
             where: { id },
             data: dataToUpdate,
+        });
+    }
+
+    async addGameToProfile(userId: number, gameId: number) {
+        const game = await this.prisma.game.findUnique({
+            where: { id: gameId }
+        });
+
+        if (!game) {
+            throw new NotFoundException('Game not found');
+        }
+
+        const existingRelation = await this.prisma.gameUser.findUnique({
+            where: {
+                gameId_userId: {
+                    gameId,
+                    userId
+                }
+            }
+        });
+
+        if (existingRelation) {
+            throw new ConflictException('Game already added to profile');
+        }
+
+        return this.prisma.gameUser.create({
+            data: {
+                gameId,
+                userId
+            }
         });
     }
 

@@ -4,6 +4,7 @@ import { GamesService } from './game.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { Request } from 'express';
+import { AddGameToProfileDto } from './dto/add-game-to-profile.dto';
 
 @Controller('games')
 export class GamesController {
@@ -39,6 +40,14 @@ export class GamesController {
     return this.gamesService.getGamesByUser(userId);
   }
 
+  @Post('profile/add')
+  async addGameToProfile(
+    @Body() addGameToProfileDto: AddGameToProfileDto,
+  ) {
+    return this.gamesService.addGameToProfile(addGameToProfileDto.userId,
+      addGameToProfileDto.gameId
+    );
+  }
 
   @Get('not-in-profile/:userId')
   async getGamesNotInUserProfile(@Param('userId') userId: string) {
@@ -48,6 +57,11 @@ export class GamesController {
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.gamesService.findOne(id);
+  }
+
+  @Get(':gameId/profile')
+  async getGameProfile(@Param('gameId') gameId: string) {
+    return this.gamesService.getGameProfile(Number(gameId));
   }
 }
 

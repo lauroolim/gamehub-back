@@ -36,6 +36,7 @@ model User {
   createdAt       DateTime          @default(now())
   donations       Donation[]
   UserGameBenefit UserGameBenefit[]
+  GameFollower    GameFollower[]
 }
 
 model Subscription {
@@ -125,6 +126,19 @@ model Game {
   posts           Post[]
   benefits        Benefit[]
   UserGameBenefit UserGameBenefit[]
+  GameFollower    GameFollower[]
+}
+
+model GameFollower {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  gameId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@unique([userId, gameId])
 }
 
 model GameUser {
