@@ -81,16 +81,37 @@ export class DonationService {
   async validateDonationToken(token: string) {
     const donation = await this.prisma.donation.findUnique({
       where: { token },
+      include: {
+        UserGameBenefit: {
+          include: {
+            benefit: true
+          }
+        }
+      }
     });
 
     if (!donation) {
       return null;
     }
 
+    if (donation.UserGameBenefit.length === 0) {
+      const benefits = await this.getEscalatedBenefits(donation.amount);
+
+      await this.prisma.userGameBenefit.createMany({
+        data: benefits.map(benefit => ({
+          userId: donation.userId,
+          gameId: donation.gameId,
+          benefitId: benefit.id,
+          donationId: donation.id,
+          isActive: true
+        }))
+      });
+    }
+
     return {
       gameId: donation.gameId,
       userId: donation.userId,
-      benefits: await this.getEscalatedBenefits(donation.amount),
+      activeBenefits: donation.UserGameBenefit.filter(ub => ub.isActive).map(ub => ub.benefit)
     };
   }
 
@@ -132,16 +153,10 @@ export class DonationService {
 
     const authorId = game.userId;
 
-    const gamesByAuthor = await this.prisma.game.findMany({
-      where: { userId: authorId },
-      select: { id: true },
-    });
-
-    const gameIds = gamesByAuthor.map((g) => g.id);
-
     const result = await this.prisma.donation.aggregate({
       where: {
-        gameId: { in: gameIds },
+        gameId: gameId,
+        userId: authorId,
       },
       _sum: {
         amount: true,
@@ -162,22 +177,5 @@ export class DonationService {
       },
     });
     return result._sum.amount || 0;
-  }
-
-  async validateGameDevCode(gameId: number, token: string) {
-    const donation = await this.prisma.donation.findFirst({
-      where: { gameId, token },
-    });
-
-    if (!donation) {
-      return { valid: false, message: 'Código inválido ou não associado a este jogo.' };
-    }
-
-    return {
-      valid: true,
-      message: 'Código válido.',
-      amount: donation.amount,
-      benefits: await this.getEscalatedBenefits(donation.amount),
-    };
   }
 }

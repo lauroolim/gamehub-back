@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { DonationService } from './donation.service';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('donation')
 export class DonationController {
@@ -29,6 +30,12 @@ export class DonationController {
   async getTotalDonationsByGameAuthor(@Param('gameId') gameId: string) {
     const total = await this.donationService.getTotalDonationsByGameAuthor(+gameId);
     return { totalDonated: total };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('validate/:token')
+  async validateDonationToken(@Param('token') token: string) {
+    return this.donationService.validateDonationToken(token);
   }
 
 }
