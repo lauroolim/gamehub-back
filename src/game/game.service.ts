@@ -197,7 +197,6 @@ export class GamesService implements OnModuleInit {
         };
     }
 
-
     async updateGame(id: number, updateGameDto: UpdateGameDto, file?: Express.Multer.File) {
         let imageUrl: string | null = null;
 
@@ -219,34 +218,38 @@ export class GamesService implements OnModuleInit {
         });
     }
 
-    async addGameToProfile(userId: number, gameId: number) {
-        const game = await this.prisma.game.findUnique({
-            where: { id: gameId }
+    async addGamesToProfile(userId: number, gameIds: number[]) {
+        const games = await this.prisma.game.findMany({
+            where: { id: { in: gameIds } },
         });
 
-        if (!game) {
-            throw new NotFoundException('Game not found');
+        if (games.length !== gameIds.length) {
+            throw new NotFoundException('One or more games not found');
         }
 
-        const existingRelation = await this.prisma.gameUser.findUnique({
+        const existingRelations = await this.prisma.gameUser.findMany({
             where: {
-                gameId_userId: {
-                    gameId,
-                    userId
-                }
-            }
+                userId,
+                gameId: { in: gameIds },
+            },
+            select: { gameId: true },
         });
 
-        if (existingRelation) {
-            throw new ConflictException('Game already added to profile');
+        const existingGameIds = existingRelations.map((rel) => rel.gameId);
+
+        const newGameIds = gameIds.filter((id) => !existingGameIds.includes(id));
+
+        if (newGameIds.length === 0) {
+            throw new ConflictException('All games are already added to profile');
         }
 
-        return this.prisma.gameUser.create({
-            data: {
-                gameId,
-                userId
-            }
+        const data = newGameIds.map((gameId) => ({ userId, gameId }));
+
+        await this.prisma.gameUser.createMany({
+            data,
         });
+
+        return { message: 'Games added to profile successfully' };
     }
 
     async getGamesNotInUserProfile(userId: number) {

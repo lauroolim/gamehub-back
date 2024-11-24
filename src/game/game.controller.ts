@@ -44,7 +44,7 @@ export class GamesController {
   async addGameToProfile(
     @Body() addGameToProfileDto: AddGameToProfileDto,
   ) {
-    return this.gamesService.addGameToProfile(addGameToProfileDto.userId,
+    return this.gamesService.addGamesToProfile(addGameToProfileDto.userId,
       addGameToProfileDto.gameId
     );
   }
