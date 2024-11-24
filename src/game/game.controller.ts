@@ -44,5 +44,10 @@ export class GamesController {
   async getGamesNotInUserProfile(@Param('userId') userId: string) {
     return this.gamesService.getGamesNotInUserProfile(+userId);
   }
+
+  @Get(':id')
+  findOne(@Param('id') id: number) {
+    return this.gamesService.findOne(id);
+  }
 }
 

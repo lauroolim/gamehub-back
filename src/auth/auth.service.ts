@@ -29,6 +29,11 @@ export class AuthService {
         profilePictureUrl: true,
         createdAt: true,
         password: true,
+        Subscription: {
+          select: {
+            isActive: true
+          }
+        }
       },
     });
 

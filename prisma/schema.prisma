@@ -33,8 +33,9 @@ model User {
   likes               Like[]
   Comment             Comment[]
 
-  createdAt DateTime   @default(now())
-  donations Donation[]
+  createdAt       DateTime          @default(now())
+  donations       Donation[]
+  UserGameBenefit UserGameBenefit[]
 }
 
 model Subscription {
@@ -66,8 +67,9 @@ model Donation {
   gameDevAmount Float
   createdAt     DateTime @default(now())
 
-  game Game @relation(fields: [gameId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  game            Game              @relation(fields: [gameId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  UserGameBenefit UserGameBenefit[]
 }
 
 model Benefit {
@@ -78,7 +80,25 @@ model Benefit {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  game Game @relation(fields: [gameId], references: [id])
+  game            Game              @relation(fields: [gameId], references: [id])
+  UserGameBenefit UserGameBenefit[]
+}
+
+model UserGameBenefit {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  gameId     Int
+  benefitId  Int
+  donationId Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  game     Game     @relation(fields: [gameId], references: [id])
+  benefit  Benefit  @relation(fields: [benefitId], references: [id])
+  donation Donation @relation(fields: [donationId], references: [id])
+
+  @@unique([userId, gameId, benefitId])
 }
 
 model PlanChange {
@@ -99,11 +119,12 @@ model Game {
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
 
-  addedBy  User?      @relation("AddedGames", fields: [userId], references: [id])
-  userId   Int?
-  Donation Donation[]
-  posts    Post[]
-  benefits Benefit[]
+  addedBy         User?             @relation("AddedGames", fields: [userId], references: [id])
+  userId          Int?
+  Donation        Donation[]
+  posts           Post[]
+  benefits        Benefit[]
+  UserGameBenefit UserGameBenefit[]
 }
 
 model GameUser {
