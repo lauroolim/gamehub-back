@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-        - image: gcr.io/gamehub-gcp/gamehub:latest
+        - image: gcr.io/gamehub-gcp/site:latest
           ports:
             - containerPort: 3000
           env:
