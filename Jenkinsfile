@@ -2,46 +2,55 @@ pipeline {
     agent any
 
     environment {
-        CLOUDSDK_CORE_PROJECT = 'gamehub-gcp'
+        GCP_PROJECT_ID = 'gamehub-gcp'
         GCLOUD_CREDS = credentials('gcloud-creds')
-        CLIENT_EMAIL='jenkins-gcloud@gamehub-gcp.iam.gserviceaccount.com'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         IMAGE_NAME = "gcr.io/${GCP_PROJECT_ID}/gamehub:${IMAGE_TAG}"
         CLOUD_RUN_SERVICE = 'gamehub-back'
+        REGION = 'us-central1'
     }
 
     stages {
-    stage('Verify version') {
-      steps {
-        sh '''
-          gcloud version
-        '''
-      }
+        stage('Verificar versão') {
+            steps {
+                sh 'gcloud version'
+            }
+        }
+        stage('Autenticar') {
+            steps {
+                sh 'gcloud auth activate-service-account --key-file="$GCLOUD_CREDS"'
+                sh 'gcloud config set project $GCP_PROJECT_ID'
+                sh 'gcloud auth configure-docker'
+            }
+        }
+        stage('Construir imagem') {
+            steps {
+                script {
+                    app = docker.build("$IMAGE_NAME")
+                }
+            }
+        }
+        stage('Push da imagem') {
+            steps {
+                script {
+                    docker.withRegistry('https://gcr.io') {
+                        app.push("$IMAGE_TAG")
+                        app.push('latest')
+                    }
+                }
+            }
+        }
+        stage('Instalar serviço') {
+            steps {
+                sh 'gcloud run services replace service.yaml --platform=managed --region=$REGION'
+            }
+        }
     }
-    stage('Authenticate') {
-      steps {
-        sh '''
-          gcloud auth activate-service-account --key-file="$GCLOUD_CREDS"
-        '''
-      }
+
+    post {
+        always {
+            sh 'docker system prune -f || true'
+            cleanWs()
+        }
     }
-    stage('Install service') {
-      steps {
-        sh '''
-          gcloud run services replace service.yaml --platform='managed' --region='us-central1'
-        '''
-      }
-    }
-    stage('Allow allUsers') {
-      steps {
-        sh '''
-          gcloud run services add-iam-policy-binding hello --region='us-central1' --member='allUsers' --role='roles/run.invoker'
-        '''
-      }
-    }
-  }
-  post {
-    always {
-      sh 'gcloud auth revoke $CLIENT_EMAIL'
-    }
-  }
 }
