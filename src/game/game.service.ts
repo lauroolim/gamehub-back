@@ -55,6 +55,18 @@ export class GamesService implements OnModuleInit {
         });
     }
 
+    async findOne(id: number) {
+        return this.prisma.game.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                gameimageUrl: true,
+                category: true,
+            },
+        });
+    }
+
     async addGame(userId: number, createGameDto: CreateGameDto, file?: Express.Multer.File) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
