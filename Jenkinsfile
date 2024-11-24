@@ -5,7 +5,7 @@ pipeline {
         GCP_PROJECT_ID = 'gamehub-gcp'
         GCLOUD_CREDS = credentials('gcloud-creds') 
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        IMAGE_NAME = "gcr.io/${GCP_PROJECT_ID}/gamehub:${IMAGE_TAG}"
+        IMAGE_NAME = "gcr.io/${GCP_PROJECT_ID}/site:latest"
         CLOUD_RUN_SERVICE = 'gamehub-back'
         REGION = 'us-central1'
     }
@@ -25,36 +25,34 @@ pipeline {
                 '''
             }
         }
-        stage('Construir imagem') {
+
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    def dockerImageTag = "${IMAGE_NAME}"
+                    def dockerImageTag = "us-central1-docker.pkg.dev/gamehub-gcp/site:latest" 
                     docker.build(dockerImageTag, "-f Dockerfile .")
-                }
-            }
-        }
-        stage('Push da imagem') {
-            steps {
-                script {
-                    docker.withRegistry('https://gcr.io', 'gcloud-creds') {
-                        docker.image("${IMAGE_NAME}").push()
+                    docker.withRegistry('https://us-central1-docker.pkg.dev', 'gcloud-creds') {
+                        docker.image(dockerImageTag).push()
                     }
                 }
             }
         }
+        
         stage('Instalar serviço') {
             steps {
                 sh '''
-                    gcloud run deploy $CLOUD_RUN_SERVICE \
-                    --image $IMAGE_NAME \
-                    --region $REGION \
-                    --platform managed \
-                    --allow-unauthenticated
+                    gcloud run services replace service.yaml --platform='managed' --region='us-central1'
+                '''
+            }
+        }
+        stage('Allow allUsers') {
+            steps {
+                sh '''
+                gcloud run services add-iam-policy-binding hello --region='us-central1' --member='allUsers' --role='roles/run.invoker'
                 '''
             }
         }
     }
-
     post {
         always {
             sh 'docker system prune -f || true'
