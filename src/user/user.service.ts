@@ -113,6 +113,56 @@ export class UserService {
     return user;
   }
 
+  async findByUsername(username: string, page: number, limit: number) {
+    const offset = (page - 1) * limit;
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        username: {
+          contains: username,
+          mode: 'insensitive',
+        },
+      },
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        username: true,
+        bio: true,
+        profilePictureUrl: true,
+        GameUser: { 
+          select: {
+            game: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                gameimageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const total = await this.prismaService.user.count({
+      where: {
+        username: {
+          contains: username,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    return {
+      users,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto) {
     try {
       const user = await this.prismaService.user.findUnique({
@@ -191,7 +241,6 @@ export class UserService {
       throw new InternalServerErrorException(`Error updating profile: ${error.message}`);
     }
   }
-
 
   async remove(id: number) {
     try {

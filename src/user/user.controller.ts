@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe, Query, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -15,6 +15,19 @@ export class UserController {
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.usersService.findOne(id);
+  }
+
+  @Get('search/username')
+  async findByUsername(
+    @Query('username') username: string,
+    @Query('page') page: number = 1, // Página padrão 1
+    @Query('limit') limit: number = 10, // Limite padrão 10
+  ) {
+    if (!username) {
+      throw new BadRequestException('Username query parameter is required');
+    }
+
+    return this.usersService.findByUsername(username, page, limit);
   }
 
   @Put(':id')

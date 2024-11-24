@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Param, Post, UploadedFile, U
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GamesService } from './game.service';
 import { CreateGameDto } from './dto/create-game.dto';
+import { UpdateGameDto } from './dto/update-game.dto';
 import { Request } from 'express';
 
 @Controller('games')
@@ -25,12 +26,12 @@ export class GamesController {
 
   @Put(':id')
   @UseInterceptors(FileInterceptor('file'))
-  async updateGames(
+  async updateGame(
     @Param('id') id: number,
-    @Body() createGameDto: CreateGameDto,
+    @Body() updateGameDto: UpdateGameDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.gamesService.updateGames(id, createGameDto, file);
+    return this.gamesService.updateGame(id, updateGameDto, file);
   }
 
   @Get('user/:userId')
