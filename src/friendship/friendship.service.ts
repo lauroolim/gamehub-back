@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { CreateFriendshipDto } from './dto/friendship.dto';
 
@@ -39,37 +39,58 @@ export class FriendshipService {
     return friendship;
   }
 
-  async followGame(followerId: number, followingId: number) {
-    const follower = await this.prisma.user.findUnique({ where: { id: followerId } });
-    const following = await this.prisma.game.findUnique({ where: { id: followingId } });
+  async followGame(userId: number, gameId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const game = await this.prisma.game.findUnique({ where: { id: gameId } });
 
-    if (!follower) {
-      throw new NotFoundException(`User with ID ${followerId} not found`);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    if (!following) {
-      throw new NotFoundException(`User with ID ${followingId} not found`);
+    if (!game) {
+      throw new NotFoundException(`Game with ID ${gameId} not found`);
     }
 
-    const friendship = await this.prisma.friendship.create({
-      data: {
-        senderId: followerId,
-        receiverId: followingId,
-        status: 'following',
+    const existingFollow = await this.prisma.gameFollower.findUnique({
+      where: {
+        userId_gameId: {
+          userId,
+          gameId,
+        },
       },
     });
 
-    await this.prisma.user.update({
-      where: { id: followerId },
-      data: { following: { increment: 1 } },
+    if (existingFollow) {
+      throw new ConflictException('User is already following this game');
+    }
+
+    const gameFollower = await this.prisma.gameFollower.create({
+      data: {
+        userId,
+        gameId,
+      },
     });
 
-    await this.prisma.user.update({
-      where: { id: followingId },
-      data: { followers: { increment: 1 } },
-    });
+    return gameFollower;
+  }
 
-    return friendship;
+  async isFollowingGame(userId: number, gameId: number): Promise<boolean> {
+    const count = await this.prisma.gameFollower.count({
+      where: {
+        userId,
+        gameId,
+      },
+    });
+    return count > 0;
+  }
+
+  async listFollowedGames(userId: number) {
+    return this.prisma.gameFollower.findMany({
+      where: { userId },
+      include: {
+        game: true,
+      },
+    });
   }
 
   async listFollowing(userId: number) {
