@@ -178,4 +178,19 @@ export class DonationService {
     });
     return result._sum.amount || 0;
   }
+
+  // donation.service.ts
+  async getGameSupportersCount(gameId: number): Promise<number> {
+    const uniqueDonors = await this.prisma.donation.findMany({
+      where: {
+        gameId: gameId,
+      },
+      select: {
+        userId: true,
+      },
+      distinct: ['userId'],
+    });
+
+    return uniqueDonors.length;
+  }
 }

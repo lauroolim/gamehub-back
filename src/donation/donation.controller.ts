@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { DonationService } from './donation.service';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateBenefitDto } from './dto/create-benefit.dto';
 
 @Controller('donation')
 export class DonationController {
@@ -32,10 +33,20 @@ export class DonationController {
     return { totalDonated: total };
   }
 
+  @Post('benefits')
+  async createBenefit(@Body() createBenefitDto: CreateBenefitDto) {
+    return this.donationService.setBenefit(createBenefitDto.gameId, createBenefitDto);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('validate/:token')
   async validateDonationToken(@Param('token') token: string) {
     return this.donationService.validateDonationToken(token);
   }
 
+  @Get('game/:gameId/supporters-count')
+  async getGameSupportersCount(@Param('gameId') gameId: string) {
+    const count = await this.donationService.getGameSupportersCount(+gameId);
+    return { supportersCount: count };
+  }
 }
