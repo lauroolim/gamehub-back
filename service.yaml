@@ -6,7 +6,9 @@ spec:
   template:
     spec:
       containers:
-        - image: us-docker.pkg.dev/cloudrun/container/gamehub-back
+        - image: gcr.io/gamehub-gcp/gamehub:latest
           ports:
-            - name: http1
-              containerPort: 80
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
