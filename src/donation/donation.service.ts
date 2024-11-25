@@ -45,6 +45,19 @@ export class DonationService {
       throw new BadRequestException('O autor do jogo não possui uma conta no Mercado Pago.');
     }
 
+    const donation = await this.prisma.donation.create({
+      data: {
+        amount,
+        description,
+        payerEmail,
+        gameId,
+        userId,
+        token: donationId,
+        platformFee: (this.platformFeePercentage / 100) * amount,
+        gameDevAmount: amount - (this.platformFeePercentage / 100) * amount,
+      },
+    });
+
     const preferenceData = {
       items: [
         {
@@ -66,20 +79,7 @@ export class DonationService {
 
     const preference = await this.preference.create({ body: preferenceData });
 
-    const donation = await this.prisma.donation.create({
-      data: {
-        amount,
-        description,
-        payerEmail,
-        gameId,
-        userId,
-        token: donationId,
-        platformFee: (this.platformFeePercentage / 100) * amount,
-        gameDevAmount: amount - (this.platformFeePercentage / 100) * amount,
-      },
-    });
-
-    return { preferenceId: preference.id, initPoint: preference.init_point };
+    return { preferenceId: preference.id, initPoint: preference.init_point, token: donationId };
   }
 
   async validateDonationToken(token: string) {
@@ -155,12 +155,9 @@ export class DonationService {
       throw new NotFoundException('Jogo ou autor não encontrado.');
     }
 
-    const authorId = game.userId;
-
     const result = await this.prisma.donation.aggregate({
       where: {
         gameId: gameId,
-        userId: authorId,
       },
       _sum: {
         gameDevAmount: true,
@@ -169,6 +166,7 @@ export class DonationService {
 
     return result._sum.gameDevAmount || 0;
   }
+
 
   async getUserTotalDonations(gameId: number, userId: number): Promise<number> {
     const result = await this.prisma.donation.aggregate({
