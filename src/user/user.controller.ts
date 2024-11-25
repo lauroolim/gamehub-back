@@ -34,6 +34,17 @@ export class UserController {
 
     return this.usersService.findByUsername(username, page, limit);
   }
+  @Get('search-by-game')
+  async getUsersByGameName(
+    @Query('game') gameName: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    if (!gameName) {
+      throw new BadRequestException('Game name is required');
+    }
+    return this.usersService.findByGameName(gameName, page, limit);
+  }
 
   @Put(':id')
   @UseInterceptors(FileInterceptor('profilePicture', {

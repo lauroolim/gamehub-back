@@ -158,6 +158,74 @@ export class UserService {
         undefined
     };
   }
+  async findByGameName(gameName: string, requestedPage: number, limit: number) {
+    const total = await this.prismaService.user.count({
+      where: {
+        GameUser: {
+          some: {
+            game: {
+              name: {
+                contains: gameName,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const validatedPage = Math.min(totalPages, Math.max(1, requestedPage));
+    const offset = (validatedPage - 1) * limit;
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        GameUser: {
+          some: {
+            game: {
+              name: {
+                contains: gameName,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      },
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        username: true,
+        profilePictureUrl: true,
+        GameUser: {
+          select: {
+            game: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                gameimageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      users,
+      total,
+      page: validatedPage,
+      totalPages,
+      limit,
+      hasNextPage: validatedPage < totalPages,
+      hasPreviousPage: validatedPage > 1,
+      message: requestedPage > totalPages
+        ? `Requested page ${requestedPage} exceeds total pages. Showing page ${validatedPage}`
+        : undefined,
+    };
+  }
 
   async addMercadoPagoAccountId(userId: number, mercadoPagoId: string) {
     const user = await this.prismaService.user.findUnique({
