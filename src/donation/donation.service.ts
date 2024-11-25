@@ -131,18 +131,19 @@ export class DonationService {
         email: payerEmail,
       },
       marketplace_fee: (this.platformFeePercentage / 100) * amount,
-      purpose: 'wallet_purchase',
       collector_id: gameDeveloperUser.mercadoPagoAccountId,
       payment_methods: {
         default_payment_method_id: 'pix',
       },
     };
-
-    const preference = await this.preference.create({ body: preferenceData });
+    const client = new MercadoPagoConfig({
+      accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    });
+    const preference = new Preference(client);
+    const result = await this.preference.create({ body: preferenceData });
 
     return {
-      preferenceId: preference.id,
-      initPoint: preference.init_point,
+      result,
       token: token,
     };
   }
