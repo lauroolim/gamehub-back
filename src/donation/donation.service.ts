@@ -133,6 +133,9 @@ export class DonationService {
       marketplace_fee: (this.platformFeePercentage / 100) * amount,
       purpose: 'wallet_purchase',
       collector_id: gameDeveloperUser.mercadoPagoAccountId,
+      payment_methods: {
+        default_payment_method_id: 'pix',
+      },
     };
 
     const preference = await this.preference.create({ body: preferenceData });
