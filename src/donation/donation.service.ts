@@ -35,9 +35,13 @@ export class DonationService {
       throw new NotFoundException('Jogo não encontrado.');
     }
 
-    const gameDeveloper = game.users[0];
+    const gameDeveloper = game.userId;
 
-    if (!gameDeveloper || !gameDeveloper.mercadoPagoAccountId) {
+    const gameDeveloperUser = await this.prisma.user.findUnique({
+      where: { id: gameDeveloper },
+    });
+
+    if (!gameDeveloperUser || !gameDeveloperUser.mercadoPagoAccountId) {
       throw new BadRequestException('O autor do jogo não possui uma conta no Mercado Pago.');
     }
 
@@ -57,7 +61,7 @@ export class DonationService {
       },
       marketplace_fee: (this.platformFeePercentage / 100) * amount,
       purpose: 'wallet_purchase',
-      collector_id: gameDeveloper.mercadoPagoAccountId,
+      collector_id: gameDeveloperUser.mercadoPagoAccountId,
     };
 
     const preference = await this.preference.create({ body: preferenceData });
@@ -159,11 +163,11 @@ export class DonationService {
         userId: authorId,
       },
       _sum: {
-        amount: true,
+        gameDevAmount: true,
       },
     });
 
-    return result._sum.amount || 0;
+    return result._sum.gameDevAmount || 0;
   }
 
   async getUserTotalDonations(gameId: number, userId: number): Promise<number> {

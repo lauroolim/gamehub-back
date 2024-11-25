@@ -17,6 +17,11 @@ export class UserController {
     return this.usersService.findOne(id);
   }
 
+  @Post('gamedev/mercado-pago-account')
+  async createMercadoPagoAccount(@Body() body: { userId: number, mercadoPagoId: string }) {
+    return this.usersService.addMercadoPagoAccountId(body.userId, body.mercadoPagoId);
+  }
+
   @Get('search/username')
   async findByUsername(
     @Query('username') username: string,

@@ -113,8 +113,21 @@ export class UserService {
     return user;
   }
 
-  async findByUsername(username: string, page: number, limit: number) {
-    const offset = (page - 1) * limit;
+  async findByUsername(username: string, requestedPage: number, limit: number) {
+    const total = await this.prismaService.user.count({
+      where: {
+        username: {
+          contains: username,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const validatedPage = Math.min(totalPages, Math.max(1, requestedPage));
+
+    const offset = (validatedPage - 1) * limit;
 
     const users = await this.prismaService.user.findMany({
       where: {
@@ -128,39 +141,44 @@ export class UserService {
       select: {
         id: true,
         username: true,
-        bio: true,
         profilePictureUrl: true,
-        GameUser: { 
-          select: {
-            game: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                category: true,
-                gameimageUrl: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const total = await this.prismaService.user.count({
-      where: {
-        username: {
-          contains: username,
-          mode: 'insensitive',
-        },
       },
     });
 
     return {
       users,
       total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      page: validatedPage,
+      totalPages,
+      limit,
+      hasNextPage: validatedPage < totalPages,
+      hasPreviousPage: validatedPage > 1,
+      message: requestedPage > totalPages ?
+        `Requested page ${requestedPage} exceeds total pages. Showing page ${validatedPage}` :
+        undefined
     };
+  }
+
+  async addMercadoPagoAccountId(userId: number, mercadoPagoId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { Subscription: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.Subscription || !user.Subscription.isActive) {
+      throw new ConflictException('Subscription is not active');
+    }
+
+    return await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        mercadoPagoAccountId: Number(mercadoPagoId),
+      },
+    });
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {

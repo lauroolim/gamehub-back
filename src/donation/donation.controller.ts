@@ -38,7 +38,6 @@ export class DonationController {
     return this.donationService.setBenefit(createBenefitDto.gameId, createBenefitDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('validate/:token')
   async validateDonationToken(@Param('token') token: string) {
     return this.donationService.validateDonationToken(token);

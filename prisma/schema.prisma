@@ -15,7 +15,7 @@ model User {
   profilePictureUrl    String?
   bio                  String?
   stamp                Boolean @default(false)
-  mercadoPagoAccountId String?
+  mercadoPagoAccountId Int?
 
   gamesAdded Game[] @relation("AddedGames")
   followers  Int    @default(0)
@@ -135,6 +135,7 @@ model GameFollower {
   userId    Int
   gameId    Int
   createdAt DateTime @default(now())
+  status    String   @default("following")
 
   user User @relation(fields: [userId], references: [id])
   game Game @relation(fields: [gameId], references: [id])

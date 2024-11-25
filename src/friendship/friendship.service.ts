@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { CreateFriendshipDto } from './dto/friendship.dto';
 
@@ -75,13 +75,28 @@ export class FriendshipService {
   }
 
   async isFollowingGame(userId: number, gameId: number): Promise<boolean> {
-    const count = await this.prisma.gameFollower.count({
-      where: {
-        userId,
-        gameId,
-      },
-    });
-    return count > 0;
+    try {
+      const parsedUserId = Number(userId);
+      const parsedGameId = Number(gameId);
+
+      if (isNaN(parsedUserId) || isNaN(parsedGameId)) {
+        throw new BadRequestException('Invalid userId or gameId');
+      }
+
+      const follow = await this.prisma.gameFollower.findUnique({
+        where: {
+          userId_gameId: {
+            userId: parsedUserId,
+            gameId: parsedGameId,
+
+          },
+        },
+      });
+
+      return !!follow;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async listFollowedGames(userId: number) {
