@@ -48,4 +48,13 @@ export class DonationController {
     const count = await this.donationService.getGameSupportersCount(+gameId);
     return { supportersCount: count };
   }
+
+  @Get('benefits/:userId/:gameId')
+  async benefitsByUserGame(
+    @Param('userId') userId: number,
+    @Param('gameId') gameId: number,
+  ) {
+    return this.donationService.benefitsByUserGame(userId, gameId);
+  }
+
 }

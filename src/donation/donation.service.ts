@@ -23,12 +23,18 @@ export class DonationService {
     const donationId = uuidv4();
     const { amount, description, payerEmail, gameId, userId } = createDonationDto;
 
+    const hasOldDonation = await this.prisma.donation.findFirst({
+      where: {
+        userId: createDonationDto.userId,
+        gameId: createDonationDto.gameId,
+      },
+    });
+
+    const token = hasOldDonation ? hasOldDonation.token : donationId;
+
 
     const game = await this.prisma.game.findUnique({
       where: { id: gameId },
-      include: {
-        users: true,
-      },
     });
 
     if (!game) {
@@ -58,6 +64,58 @@ export class DonationService {
       },
     });
 
+    const totalDonated = await this.prisma.donation.aggregate({
+      where: {
+        userId,
+        gameId,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const totalAmount = totalDonated._sum.amount || 0;
+
+    const allEligibleBenefits = await this.prisma.benefit.findMany({
+      where: {
+        gameId,
+        threshold: {
+          lte: totalAmount,
+        },
+      },
+      orderBy: {
+        threshold: 'asc',
+      },
+    });
+
+    const existingBenefits = await this.prisma.userGameBenefit.findMany({
+      where: {
+        userId,
+        gameId,
+      },
+      select: {
+        benefitId: true,
+      },
+    });
+
+    const existingBenefitIds = existingBenefits.map((b) => b.benefitId);
+
+    const newBenefits = allEligibleBenefits.filter(
+      (benefit) => !existingBenefitIds.includes(benefit.id),
+    );
+
+    if (newBenefits.length > 0) {
+      await this.prisma.userGameBenefit.createMany({
+        data: newBenefits.map((benefit) => ({
+          userId,
+          gameId,
+          benefitId: benefit.id,
+          donationId: donation.id,
+          isActive: true,
+        })),
+      });
+    }
+
     const preferenceData = {
       items: [
         {
@@ -79,7 +137,11 @@ export class DonationService {
 
     const preference = await this.preference.create({ body: preferenceData });
 
-    return { preferenceId: preference.id, initPoint: preference.init_point, token: donationId };
+    return {
+      preferenceId: preference.id,
+      initPoint: preference.init_point,
+      token: token,
+    };
   }
 
   async validateDonationToken(token: string) {
@@ -116,6 +178,34 @@ export class DonationService {
       gameId: donation.gameId,
       userId: donation.userId,
       activeBenefits: donation.UserGameBenefit.filter(ub => ub.isActive).map(ub => ub.benefit)
+    };
+  }
+
+  async benefitsByUserGame(userId: number, gameId: number) {
+    const benefits = await this.prisma.userGameBenefit.findMany({
+      where: {
+        userId,
+        gameId,
+        isActive: true
+      },
+      include: {
+        benefit: true
+      }
+    });
+
+    const totalInvested = await this.prisma.donation.aggregate({
+      where: {
+        userId,
+        gameId
+      },
+      _sum: {
+        amount: true
+      }
+    });
+
+    return {
+      benefits,
+      totalInvested: totalInvested._sum.amount || 0
     };
   }
 
