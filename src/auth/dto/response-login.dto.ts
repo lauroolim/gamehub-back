@@ -14,6 +14,7 @@ export class ResponseLoginDto {
     email: string;
     profilePictureUrl: string;
     createdAt: string;
+    hasActiveSubscription: boolean;
 
     constructor(user: User) {
         Object.assign(this, user);

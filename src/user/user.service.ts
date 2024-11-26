@@ -113,6 +113,142 @@ export class UserService {
     return user;
   }
 
+  async findByUsername(username: string, requestedPage: number, limit: number) {
+    const total = await this.prismaService.user.count({
+      where: {
+        username: {
+          contains: username,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const validatedPage = Math.min(totalPages, Math.max(1, requestedPage));
+
+    const offset = (validatedPage - 1) * limit;
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        username: {
+          contains: username,
+          mode: 'insensitive',
+        },
+      },
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        username: true,
+        profilePictureUrl: true,
+      },
+    });
+
+    return {
+      users,
+      total,
+      page: validatedPage,
+      totalPages,
+      limit,
+      hasNextPage: validatedPage < totalPages,
+      hasPreviousPage: validatedPage > 1,
+      message: requestedPage > totalPages ?
+        `Requested page ${requestedPage} exceeds total pages. Showing page ${validatedPage}` :
+        undefined
+    };
+  }
+  async findByGameName(gameName: string, requestedPage: number, limit: number) {
+    const total = await this.prismaService.user.count({
+      where: {
+        GameUser: {
+          some: {
+            game: {
+              name: {
+                contains: gameName,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const validatedPage = Math.min(totalPages, Math.max(1, requestedPage));
+    const offset = (validatedPage - 1) * limit;
+
+    const users = await this.prismaService.user.findMany({
+      where: {
+        GameUser: {
+          some: {
+            game: {
+              name: {
+                contains: gameName,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      },
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        username: true,
+        profilePictureUrl: true,
+        GameUser: {
+          select: {
+            game: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                gameimageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      users,
+      total,
+      page: validatedPage,
+      totalPages,
+      limit,
+      hasNextPage: validatedPage < totalPages,
+      hasPreviousPage: validatedPage > 1,
+      message: requestedPage > totalPages
+        ? `Requested page ${requestedPage} exceeds total pages. Showing page ${validatedPage}`
+        : undefined,
+    };
+  }
+
+  async addMercadoPagoAccountId(userId: number, mercadoPagoId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { Subscription: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.Subscription || !user.Subscription.isActive) {
+      throw new ConflictException('Subscription is not active');
+    }
+
+    return await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        mercadoPagoAccountId: Number(mercadoPagoId),
+      },
+    });
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto) {
     try {
       const user = await this.prismaService.user.findUnique({
@@ -191,7 +327,6 @@ export class UserService {
       throw new InternalServerErrorException(`Error updating profile: ${error.message}`);
     }
   }
-
 
   async remove(id: number) {
     try {

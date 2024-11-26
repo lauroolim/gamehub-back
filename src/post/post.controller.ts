@@ -14,8 +14,9 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PostService } from './post.service';
-import { CreatePostDto } from './dto/create-post.dto';
+import { CreateUserPostDto } from './dto/create-user-post.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CreateGamePostDto } from './dto/create-game-post.dto';
 
 @Controller('post')
 export class PostController {
@@ -24,7 +25,7 @@ export class PostController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async createPost(
-    @Body() body: { authorId: string; content: string },
+    @Body() body: { authorId: string; content: string; gameId?: string },
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -37,12 +38,42 @@ export class PostController {
     )
     file?: Express.Multer.File,
   ) {
-    const createPostDto: CreatePostDto = {
+    const createUserPostDto: CreateUserPostDto = {
+      authorId: parseInt(body.authorId, 10),
+      content: body.content,
+      gameId: body.gameId ? parseInt(body.gameId, 10) : undefined,
+    };
+
+    return this.postService.createUserPost(createUserPostDto, file);
+  }
+
+  @Post('game')
+  @UseInterceptors(FileInterceptor('file'))
+  async createGamePost(
+    @Body() body: { gameId: string; authorId: string; content: string },
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 20 * 1024 * 1024 }),
+          new FileTypeValidator({
+            fileType: /image\/(png|jpg|jpeg)|video\/(mp4|avi|mov)/,
+          }),
+        ],
+      }),
+    )
+    file?: Express.Multer.File,
+  ) {
+    const createGamePostDto: CreateGamePostDto = {
+      gameId: parseInt(body.gameId, 10),
       authorId: parseInt(body.authorId, 10),
       content: body.content,
     };
+    return this.postService.createGamePost(createGamePostDto, file);
+  }
 
-    return this.postService.create(createPostDto, file);
+  @Get('game/:gameId')
+  async findPostsByGameId(@Param('gameId') gameId: string) {
+    return this.postService.findPostsByGameId(+gameId);
   }
 
   @Get()

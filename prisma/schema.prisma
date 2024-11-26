@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id                Int     @id @default(autoincrement())
-  username          String  @unique
-  email             String  @unique
-  password          String
-  profilePictureUrl String?
-  bio               String?
-  stamp             Boolean @default(false)
+  id                   Int     @id @default(autoincrement())
+  username             String  @unique
+  email                String  @unique
+  password             String
+  profilePictureUrl    String?
+  bio                  String?
+  stamp                Boolean @default(false)
+  mercadoPagoAccountId Int?
 
   gamesAdded Game[] @relation("AddedGames")
   followers  Int    @default(0)
@@ -29,26 +30,76 @@ model User {
   games               Game[]        @relation("GameToUser")
   posts               Post[]
   views               View[]
-  Like                Like[]
+  likes               Like[]
   Comment             Comment[]
 
-  createdAt DateTime @default(now())
+  createdAt       DateTime          @default(now())
+  donations       Donation[]
+  UserGameBenefit UserGameBenefit[]
+  GameFollower    GameFollower[]
 }
 
 model Subscription {
-  id               Int      @id @default(autoincrement())
-  type             String
-  price            Float
-  isActive         Boolean  @default(true)
-  userId           Int      @unique
-  user             User     @relation(fields: [userId], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  expiresAt        DateTime
-  stripeId         String
-  stripeCustomerId String
+  id                   Int      @id @default(autoincrement())
+  type                 String
+  price                Float
+  isActive             Boolean  @default(true)
+  userId               Int      @unique
+  user                 User     @relation(fields: [userId], references: [id])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  expiresAt            DateTime
+  stripeId             String
+  stripeSubscriptionId String   @default("")
+  stripeCustomerId     String   @default("")
 
   planChanges PlanChange[]
+}
+
+model Donation {
+  id            Int      @id @default(autoincrement())
+  amount        Float
+  description   String
+  payerEmail    String
+  gameId        Int
+  userId        Int
+  token         String   @unique
+  platformFee   Float
+  gameDevAmount Float
+  createdAt     DateTime @default(now())
+
+  game            Game              @relation(fields: [gameId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  UserGameBenefit UserGameBenefit[]
+}
+
+model Benefit {
+  id          Int      @id @default(autoincrement())
+  gameId      Int
+  threshold   Float
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  game            Game              @relation(fields: [gameId], references: [id])
+  UserGameBenefit UserGameBenefit[]
+}
+
+model UserGameBenefit {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  gameId     Int
+  benefitId  Int
+  donationId Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  game     Game     @relation(fields: [gameId], references: [id])
+  benefit  Benefit  @relation(fields: [benefitId], references: [id])
+  donation Donation @relation(fields: [donationId], references: [id])
+
+  @@unique([userId, gameId, benefitId])
 }
 
 model PlanChange {
@@ -66,11 +117,30 @@ model Game {
   description  String?
   category     String?
   gameimageUrl String?
+  isStatic     Boolean    @default(false)
   GameUser     GameUser[]
   users        User[]     @relation("GameToUser")
 
-  addedBy User? @relation("AddedGames", fields: [userId], references: [id])
-  userId  Int?
+  addedBy         User?             @relation("AddedGames", fields: [userId], references: [id])
+  userId          Int?
+  Donation        Donation[]
+  posts           Post[]
+  benefits        Benefit[]
+  UserGameBenefit UserGameBenefit[]
+  GameFollower    GameFollower[]
+}
+
+model GameFollower {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  gameId    Int
+  createdAt DateTime @default(now())
+  status    String   @default("following")
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@unique([userId, gameId])
 }
 
 model GameUser {
@@ -108,15 +178,18 @@ model Message {
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  content   String
-  imageUrl  String?
-  authorId  Int
-  author    User      @relation(fields: [authorId], references: [id])
-  createdAt DateTime  @default(now())
-  views     View[]
-  likes     Like[]
-  comments  Comment[]
+  id         Int       @id @default(autoincrement())
+  content    String
+  imageUrl   String?
+  authorId   Int
+  author     User      @relation(fields: [authorId], references: [id])
+  gameId     Int?
+  game       Game?     @relation(fields: [gameId], references: [id])
+  createdAt  DateTime  @default(now())
+  views      View[]
+  likes      Like[]
+  likesCount Int       @default(0)
+  comments   Comment[]
 }
 
 model View {
@@ -131,14 +204,12 @@ model View {
 }
 
 model Like {
-  id     Int  @id @default(autoincrement())
   postId Int
   userId Int
   post   Post @relation(fields: [postId], references: [id])
   user   User @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
-
+  @@id([postId, userId])
   @@unique([postId, userId])
 }
 

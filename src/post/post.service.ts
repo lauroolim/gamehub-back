@@ -1,5 +1,6 @@
-import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { CreatePostDto } from './dto/create-post.dto';
+import { CreateGamePostDto } from './dto/create-game-post.dto';
+import { Injectable, ConflictException, NotFoundException, InternalServerErrorException, HttpCode } from '@nestjs/common';
+import { CreateUserPostDto } from './dto/create-user-post.dto';
 import { PrismaService } from '../shared/database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -22,11 +23,16 @@ export class PostService {
       Body: file,
       ACL: 'public-read',
     });
-    await this.s3Client.send(command);
+    try {
+      await this.s3Client.send(command);
+    } catch (error) {
+      throw new InternalServerErrorException('Error uploading file to S3');
+    }
     return `https://midias-app-gamehub.s3.amazonaws.com/${fileName}`;
   }
 
-  async create(createPostDto: CreatePostDto, file?: Express.Multer.File) {
+  @HttpCode(200)
+  async createUserPost(createPostDto: CreateUserPostDto, file?: Express.Multer.File) {
     let imageUrl: string | null = null;
 
     if (file) {
@@ -34,11 +40,52 @@ export class PostService {
       imageUrl = await this.uploadFile(fileName, file.buffer);
     }
 
-    return this.prisma.post.create({
+    const user = await this.prisma.user.findUnique({ where: { id: createPostDto.authorId } });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    if (createPostDto.gameId) {
+      const game = await this.prisma.game.findUnique({
+        where: { id: createPostDto.gameId },
+      });
+      if (!game) {
+        throw new NotFoundException('Game not found');
+      }
+    }
+
+    await this.prisma.post.create({
       data: {
         content: createPostDto.content,
-        authorId: createPostDto.authorId,
+        author: { connect: { id: createPostDto.authorId } },
         imageUrl,
+        game: createPostDto.gameId ? { connect: { id: createPostDto.gameId } } : undefined,
+      },
+    });
+  }
+
+  @HttpCode(200)
+  async createGamePost(createGamePostDto: CreateGamePostDto, file?: Express.Multer.File) {
+    let imageUrl: string | null = null;
+
+    const { gameId, authorId } = createGamePostDto;
+
+    if (file) {
+      const fileName = `${Date.now()}-${file.originalname}`;
+      imageUrl = await this.uploadFile(fileName, file.buffer);
+    }
+
+    const game = await this.prisma.game.findUnique({ where: { id: gameId } });
+    if (!game) {
+      throw new NotFoundException('game not found');
+    }
+
+    await this.prisma.post.create({
+      data: {
+        content: createGamePostDto.content,
+        imageUrl,
+        author: { connect: { id: authorId } },
+        game: { connect: { id: gameId } },
       },
     });
   }
@@ -69,17 +116,23 @@ export class PostService {
     });
 
     if (existingLike) {
-      return this.prisma.like.delete({
-        where: { postId_userId: { postId, userId } },
-      });
+      return { message: 'You have already liked this post.' };
     }
 
-    return this.prisma.like.create({
+    await this.prisma.like.create({
+      data: { postId, userId },
+    });
+
+    await this.prisma.post.update({
+      where: { id: postId },
       data: {
-        postId,
-        userId,
+        likesCount: {
+          increment: 1,
+        },
       },
     });
+
+    return { message: 'Post liked successfully.' };
   }
 
 
@@ -146,6 +199,32 @@ export class PostService {
     return this.prisma.post.findMany({
       where: {
         authorId: userId,
+      },
+      include: {
+        _count: {
+          select: { likes: true, comments: true },
+        },
+        comments: {
+          select: {
+            content: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findPostsByGameId(gameId: number) {
+    return this.prisma.post.findMany({
+      where: {
+        gameId,
       },
       include: {
         _count: {

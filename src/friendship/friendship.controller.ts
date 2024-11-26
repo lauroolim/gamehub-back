@@ -12,6 +12,25 @@ export class FriendshipController {
     return this.friendshipService.followUser(followerId, followingId);
   }
 
+  @Post('follow/game')
+  async followGame(@Body() body: { userId: number; gameId: number }) {
+    const { userId, gameId } = body;
+    return this.friendshipService.followGame(userId, gameId);
+  }
+
+  @Get('is-following/game/:userId/:gameId')
+  async isFollowingGame(
+    @Param('userId') userId: number,
+    @Param('gameId') gameId: number,
+  ): Promise<{ isFollowing: boolean }> {
+    const isFollowing = await this.friendshipService.isFollowingGame(userId, gameId);
+    return { isFollowing };
+  }
+
+  @Get('followed-games/:userId')
+  async listFollowedGames(@Param('userId') userId: number) {
+    return this.friendshipService.listFollowedGames(userId);
+  }
 
   @Get('following/:userId')
   async getFollowing(@Param('userId') userId: number) {

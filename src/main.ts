@@ -33,7 +33,7 @@ async function bootstrap() {
     app.getHttpAdapter().get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
     const port = parseInt(process.env.PORT, 10) || 3000;
-    await app.listen(parseInt(process.env.PORT, 10) || 3000)
+    await app.listen(parseInt(process.env.PORT, 10) || 3000);
     console.log(`Application is running on port ${port}`);
 
     const signals = ['SIGTERM', 'SIGINT'];
