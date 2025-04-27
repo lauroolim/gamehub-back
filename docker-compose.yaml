@@ -1,5 +1,5 @@
 services:
-  db: 
+  db:
     image: postgres:latest
     environment:
       POSTGRES_USER: user
@@ -10,14 +10,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
   backend:
-    build: 
+    build:
       context: .
       target: development
     command: npm run start:dev
     ports:
       - "8000:3000"
     env_file:
-      - ./.env
+      - .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-mydb}
     depends_on:
@@ -26,9 +26,8 @@ services:
       - ./src:/usr/src/app/src
       - ./prisma:/usr/src/app/prisma
       - ./test:/usr/src/app/test
-      - ./node_modules:/usr/src/app/node_modules
     restart: unless-stopped
-  
+
 volumes:
   postgres_data:
-  
+
